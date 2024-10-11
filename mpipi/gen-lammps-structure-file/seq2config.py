@@ -1,9 +1,11 @@
 import numpy as np
 from sys import argv
+from pathlib import Path
 
 '''
 For details on using this script, please consult ReadMe.txt
 '''
+script_dir = Path(__file__).parent
 
 if len(argv) > 1:
 
@@ -13,8 +15,8 @@ if len(argv) > 1:
 	if seqType == 3:
 		seq = str(argv[2])
 		nres = int(len(seq)/3)
-		charges = np.loadtxt('aa_charges_three_letters.txt', dtype=str)
-		types = np.loadtxt('aa_types_three_letters.txt', dtype=str)
+		charges = np.loadtxt(f'{script_dir}/aa_charges_three_letters.txt', dtype=str)
+		types = np.loadtxt(f'{script_dir}/aa_types_three_letters.txt', dtype=str)
 
 		typescharges = []
 
@@ -28,8 +30,8 @@ if len(argv) > 1:
 	elif seqType == 1:
 		seq = str(argv[2])
 		nres = len(seq)
-		charges = np.loadtxt('aa_charges_one_letter.txt', dtype=str)
-		types = np.loadtxt('aa_types_one_letter.txt', dtype=str)
+		charges = np.loadtxt(f'{script_dir}/aa_charges_one_letter.txt', dtype=str)
+		types = np.loadtxt(f'{script_dir}/aa_types_one_letter.txt', dtype=str)
 
 		typescharges = []
 
@@ -43,8 +45,8 @@ else:
     seqType = len(seq[0])
 
     if seqType == 3:
-        charges = np.loadtxt('aa_charges_three_letters.txt', dtype=str)
-        types = np.loadtxt('aa_types_three_letters.txt', dtype=str)
+        charges = np.loadtxt(f'{script_dir}/aa_charges_three_letters.txt', dtype=str)
+        types = np.loadtxt(f'{script_dir}/aa_types_three_letters.txt', dtype=str)
         nres = len(seq)
         
         typescharges = []
@@ -55,8 +57,8 @@ else:
             typescharges.append([int(types[p,1]),float(charges[k,1])])
 
     elif seqType == 1:
-        charges = np.loadtxt('aa_charges_one_letter.txt', dtype=str)
-        types = np.loadtxt('aa_types_one_letter.txt', dtype=str)
+        charges = np.loadtxt(f'{script_dir}/aa_charges_one_letter.txt', dtype=str)
+        types = np.loadtxt(f'{script_dir}/aa_types_one_letter.txt', dtype=str)
         nres = len(seq)
         
         typescharges = []
@@ -77,8 +79,8 @@ out.write('%d bonds\n\n'%(total_atoms-1))
 out.write('%d atom types\n'%no_atom_types)
 out.write('1 bond types\n\n')
 
-min_box = nres * -3
-max_box = nres * 3
+min_box = -300 # hard-coded value for the box-size (change to variable in future)
+max_box = 300
 
 out.write('%5f   %5f  xlo xhi\n'%(min_box,max_box))
 out.write('%5f   %5f  ylo yhi\n'%(min_box,max_box))
