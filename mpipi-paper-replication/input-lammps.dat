@@ -28,7 +28,7 @@ neighbor  3.5 multi
 
 # Timestep and computational parameters
 comm_style      tiled
-timestep        10
+timestep        20
 
 # Relax sim by performing minimisation (this is helpful if we change the potential or sequence)
 min_style       fire
@@ -44,7 +44,7 @@ minimize 0.0 1.0e-8 1000 100000
 neigh_modify    every 10 delay 0
 
 fix fxnve   all nve
-fix fxlange all langevin ${temperature} ${temperature} 5000.0 ${randomSeed}
+fix fxlange all langevin ${temperature} ${temperature} 100000 ${randomSeed}
 fix fxbal   all balance 1000 1.05 rcb
 
 # Thermo output settings
