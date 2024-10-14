@@ -1,0 +1,46 @@
+variable randomSeed equal 783547
+variable myTemp equal 100
+ 
+units       real
+dimension   3
+boundary    p p p
+atom_style  full
+ 
+ 
+bond_style  harmonic
+dielectric  80.0
+ 
+read_data  singleChainConfig.dat
+replicate 5 5 4
+ 
+include ../../potentials.dat
+ 
+special_bonds fene
+ 
+neighbor  3.5 multi
+neigh_modify  every 10 delay 0
+comm_style    tiled
+ 
+timestep      10
+timer timeout 03:00:00
+ 
+fix             fxnve   all nve
+fix             fxlange all langevin ${myTemp} ${myTemp} 100000.0 ${randomSeed}
+fix             fxbal  all balance 1000 1.05 rcb
+fix             fxbaro  all press/berendsen iso 50 100 100000.0
+ 
+dump          1 all custom 1000 replicate.lammpstrj id mol type q xu yu zu #unwrapped coordinates 
+dump_modify   1 sort id
+
+compute       rad all gyration
+fix           fxrg all ave/time 100000 1 100000 c_rad file Rg.out 
+ 
+thermo        1000
+thermo_style  custom step pe press ke temp lx ly lz pzz  spcpu density
+thermo_modify flush yes
+ 
+ 
+restart      25000 restart
+run          75000
+
+write        finalStructureSlab.dat nocoeff #make sure to have this sorted to the correct molecule ids
