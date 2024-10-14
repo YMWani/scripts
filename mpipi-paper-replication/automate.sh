@@ -12,8 +12,8 @@ if [ -f "$filename" ]; then
     component1=$(echo "$line" | awk '{print $1}')
     component2=$(echo "$line" | awk '{print $2}')
     # Print the components
-#     echo "Component 1: $component1"
-#     echo "Component 2: $component2"
+    # echo "Component 1: $component1"
+    # echo "Component 2: $component2"
     # Create a directory with the name of the protein
     mkdir ${component1}
     cd ${component1}
