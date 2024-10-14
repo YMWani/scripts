@@ -1,0 +1,61 @@
+variable temperature equal 300
+variable randomSeed equal 8965
+
+# Initialize parameters for units and box type
+units       real
+dimension   3
+boundary    p p p
+atom_style  full
+
+# Initial pair style and bond parameters
+bond_style  harmonic
+
+dielectric  80.0
+
+# Create new simulation box or load existing box
+read_data       initialChainConfig.dat
+
+# Set pair parameters
+include         ../../potentials.dat
+
+reset_atom_ids
+velocity        all create ${temperature} ${randomSeed}
+
+special_bonds fene
+
+# neighbour list settings
+neighbor  3.5 multi
+
+# Timestep and computational parameters
+comm_style      tiled
+timestep        10
+
+# Relax sim by performing minimisation (this is helpful if we change the potential or sequence)
+min_style       fire
+timestep        0.0000001
+minimize 0.0 1.0e-8 1000 100000
+timestep        0.00001
+minimize 0.0 1.0e-8 1000 100000
+timestep        0.1
+minimize 0.0 1.0e-8 1000 100000
+timestep        10
+minimize 0.0 1.0e-8 1000 100000
+
+neigh_modify    every 10 delay 0
+
+fix             fxnve   all nve
+fix             fxlange all langevin ${temperature} ${temperature} 100000.0 ${randomSeed}
+fix             fxbal  all balance 1000 1.1 rcb
+
+# Thermo output settings
+thermo          1000
+thermo_style    custom step pe ecoul ke temp press density
+thermo_modify   flush yes
+
+dump            1 all custom 10000 result.lammpstrj id mol type q x y z
+
+# Run simulation
+run             1000000
+
+# write final configuration
+write_data      finalSingleChainStructure.dat nocoeff
