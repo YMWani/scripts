@@ -79,8 +79,8 @@ out.write('%d bonds\n\n'%(total_atoms-1))
 out.write('%d atom types\n'%no_atom_types)
 out.write('1 bond types\n\n')
 
-min_box = -300 # hard-coded value for the box-size (change to variable in future)
-max_box = 300
+min_box = nres * -3
+max_box = nres * 3
 
 out.write('%5f   %5f  xlo xhi\n'%(min_box,max_box))
 out.write('%5f   %5f  ylo yhi\n'%(min_box,max_box))
