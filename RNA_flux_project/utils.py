@@ -153,15 +153,14 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     # Bond data
     out.write('\nBonds\n\n')
     # Write bonds for the first chain
-    mol_id = 1
+    bond_type = 1
     bond_id = 1
     for atom_id in range(1, chain1_length):
-        out.write('%d %d %d %d\n' %(bond_id,mol_id,atom_id,atom_id+1))
+        out.write('%d %d %d %d\n' %(bond_id,bond_type,atom_id,atom_id+1))
         bond_id += 1
     # Write bonds for the second chain
-    mol_id = 2
     for atom_id in range(chain1_length+1, chain1_length+chain2_length):
-        out.write('%d %d %d %d\n' %(bond_id,mol_id,atom_id,atom_id+1))
+        out.write('%d %d %d %d\n' %(bond_id,bond_type,atom_id,atom_id+1))
         bond_id += 1
     
     out.close()
@@ -176,12 +175,6 @@ if __name__ == "__main__":
     in a simulation box. The configuration needs to be equilibrated through minimization/running a
     simulation for some time.
     """
-    # parent_dir = Path(__file__).parent
-    # with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
-    #     amino_acid_dict = json.load(f)
-    # with open(f'{parent_dir}/amino_acid_masses.json', 'r') as f:
-    #     amino_acid_mass_dict = json.load(f)
-
     seq1 = "AFAAF"*10
     check_sequence_validity(seq1)
     
