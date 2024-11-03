@@ -86,6 +86,7 @@ def remove_velocities(input_file, output_file):
                 # outfile.write(line)
                 # Move to the next line (usually a blank line after "Velocities")
                 # outfile.write(next(infile))
+                next(infile)
                 continue
             
             # If in "Velocities" section, skip lines until it ends
