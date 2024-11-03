@@ -83,9 +83,9 @@ def remove_velocities(input_file, output_file):
             # Check if the line marks the beginning of the "Velocities" section
             if line.strip() == "Velocities":
                 in_velocities_section = True
-                outfile.write(line)
+                # outfile.write(line)
                 # Move to the next line (usually a blank line after "Velocities")
-                outfile.write(next(infile))
+                # outfile.write(next(infile))
                 continue
             
             # If in "Velocities" section, skip lines until it ends
