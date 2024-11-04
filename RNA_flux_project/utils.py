@@ -4,7 +4,9 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-plt.style.use("../plotting/ymw.mplstyle")
+import pathlib
+current_dir = pathlib.Path(__file__).resolve().parent
+plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
 
 
 def check_sequence_validity(sequence):
