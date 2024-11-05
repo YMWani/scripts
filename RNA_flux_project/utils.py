@@ -319,9 +319,16 @@ def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
     return abs(rhoA_center - rhoB_center) - s*(rhoA_vapour + rhoB_vapour)
 
 
-def generate_children(N_tour, num_values, population):
+def generate_children(N_tour, num_parents, population):
     """
-    description
+    Function to create children from a set of population. Here we use the tournament
+    algorithm to make children.
+
+    Parameters:
+    - N_tour (int): Sample size of each tournament round
+    - num_parents (int): Number of parents to extract from the provided population (can repeat)
+    - population (array): Array containing information about the fittest members of the initial
+                          population. Information: (sequence, fitness)
     """
     sequences = np.array(population[:,0]).astype(str)
     fitness_vals = np.array(population[:,1]).astype(float)
@@ -331,7 +338,7 @@ def generate_children(N_tour, num_values, population):
     num_seq = sequences.shape[0]
     seq_length = len(sequences[0])
     
-    for i in range(num_values):
+    for i in range(num_parents):
         # Randomly pick 5 parents from the population
         random_sample = random.sample(range(num_seq), N_tour)
         sample_fitness = fitness_vals[random_sample]
