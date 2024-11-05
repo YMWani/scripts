@@ -359,6 +359,11 @@ def generate_children(N_tour, num_parents, population):
         child_mutated = mutate_sequence(child, 0.05)
         children[f'C{counter}'] = child_mutated
         counter += 1
+        # Child 2
+        child = b[:k] + a[k:]
+        child_mutated = mutate_sequence(child, 0.05)
+        children[f'C{counter}'] = child_mutated
+        counter += 1
     
     return children
 
