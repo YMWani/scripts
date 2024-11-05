@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import pathlib
+import random
 current_dir = pathlib.Path(__file__).resolve().parent
 plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
 
@@ -318,6 +319,41 @@ def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
     return abs(rhoA_center - rhoB_center) - s*(rhoA_vapour + rhoB_vapour)
 
 
+def generate_children(N_tour, num_values, population):
+    """
+    description
+    """
+    sequences = np.array(population[:,0]).astype(str)
+    fitness_vals = np.array(population[:,1]).astype(float)
+    
+    parents = []
+    N_tour = 5
+    num_seq = sequences.shape[0]
+    seq_length = len(sequences[0])
+    
+    for i in range(num_values):
+        # Randomly pick 5 parents from the population
+        random_sample = random.sample(range(num_seq), N_tour)
+        sample_fitness = fitness_vals[random_sample]
+        fittest_pick = max(sample_fitness)
+        idx = fitness_vals.tolist().index(fittest_pick)
+        parents.append(sequences[idx])
+    
+    np.random.shuffle(parents)
+    pairs = [(parents[j], parents[j+1]) for j in range(0, len(parents)-1, 2)]
+    
+    children = {}
+    counter = 1
+    for a,b in pairs:
+        # Pick a random point in the sequences for a cross-over
+        k = np.random.randint(seq_length) + 1
+        # Child 1
+        child = a[:k] + b[k:]
+        child_mutated = mutate_sequence(child, 0.05)
+        children[f'C{counter}'] = child_mutated
+        counter += 1
+    
+    return children
 
 
 
@@ -340,47 +376,50 @@ if __name__ == "__main__":
     
     """                            ****** SECTION *****
     """
-    # Global density profile
-    tsteps, density_profile = parse_density_profile_file("/Users/yw9071_admin/Downloads/density_all.dat")
-    bins, bin_density = compute_averaged_density_profile(density_profile)
-    # Visualization
-    fig, ax = plt.subplots()
-    # Recentered density profile
-    ax.plot(bins, bin_density, marker='o', linestyle='')
-    left_intrfc, right_intrfc, fine_coords, fitted_profile = find_interfaces(bins, bin_density)
-    ax.plot(fine_coords, fitted_profile)
-    # Interfaces
-    yvals = np.linspace(min(bin_density), max(bin_density), 3)
-    ax.plot(np.repeat(left_intrfc, 3), yvals, color="black", linestyle="dashed")
-    ax.plot(np.repeat(right_intrfc, 3), yvals, color="black", linestyle="dashed")
-    # Set labels
-    ax.set_xlabel(r"$z/L_\mathrm{z}$")
-    ax.set_ylabel(r"$\rho \, (\mathrm{g/cm^3})$")
-    plt.tight_layout()
+    # # Global density profile
+    # tsteps, density_profile = parse_density_profile_file("/Users/yw9071_admin/Downloads/density_all.dat")
+    # bins, bin_density = compute_averaged_density_profile(density_profile)
+    # # Visualization
+    # fig, ax = plt.subplots()
+    # # Recentered density profile
+    # ax.plot(bins, bin_density, marker='o', linestyle='')
+    # left_intrfc, right_intrfc, fine_coords, fitted_profile = find_interfaces(bins, bin_density)
+    # ax.plot(fine_coords, fitted_profile)
+    # # Interfaces
+    # yvals = np.linspace(min(bin_density), max(bin_density), 3)
+    # ax.plot(np.repeat(left_intrfc, 3), yvals, color="black", linestyle="dashed")
+    # ax.plot(np.repeat(right_intrfc, 3), yvals, color="black", linestyle="dashed")
+    # # Set labels
+    # ax.set_xlabel(r"$z/L_\mathrm{z}$")
+    # ax.set_ylabel(r"$\rho \, (\mathrm{g/cm^3})$")
+    # plt.tight_layout()
+    # # plt.show()
+
+    # # Protein specific density profile
+    # tsteps_I, density_profile_I = parse_density_profile_file("/Users/yw9071_admin/Downloads/density_inner.dat")
+    # bins_I, bin_density_I = compute_averaged_density_profile(density_profile_I)
+    
+    # tsteps_O, density_profile_O = parse_density_profile_file("/Users/yw9071_admin/Downloads/density_outer.dat")
+    # bins_O, bin_density_O = compute_averaged_density_profile(density_profile_O)
+    
+    # # Recentered density profile
+    # ax.plot(bins_I, bin_density_I, label="Inner protein")
+    # ax.plot(bins_O, bin_density_O, label="Outer protein")
+    # plt.legend()
     # plt.show()
 
-    # Protein specific density profile
-    tsteps_I, density_profile_I = parse_density_profile_file("/Users/yw9071_admin/Downloads/density_inner.dat")
-    bins_I, bin_density_I = compute_averaged_density_profile(density_profile_I)
-    
-    tsteps_O, density_profile_O = parse_density_profile_file("/Users/yw9071_admin/Downloads/density_outer.dat")
-    bins_O, bin_density_O = compute_averaged_density_profile(density_profile_O)
-    
-    # Recentered density profile
-    ax.plot(bins_I, bin_density_I, label="Inner protein")
-    ax.plot(bins_O, bin_density_O, label="Outer protein")
-    plt.legend()
-    plt.show()
+    # mask_bins_O = (bins_O >= 0.45) & (bins_O <= 0.55)
+    # rhoO_center = np.mean(bin_density_O[mask_bins_O])
+    # mask_bins_I = (bins_I >= 0.45) & (bins_I <= 0.55)
+    # rhoI_center = np.mean(bin_density_I[mask_bins_I])
 
-    mask_bins_O = (bins_O >= 0.45) & (bins_O <= 0.55)
-    rhoO_center = np.mean(bin_density_O[mask_bins_O])
-    mask_bins_I = (bins_I >= 0.45) & (bins_I <= 0.55)
-    rhoI_center = np.mean(bin_density_I[mask_bins_I])
-
-    mask_vapour_O = (bin_density_O < 0.05)
-    rhoO_vapour = np.mean(bin_density_O[mask_vapour_O])
-    mask_vapour_I = (bin_density_I < 0.05)
-    rhoI_vapour = np.mean(bin_density_I[mask_vapour_I])
+    # mask_vapour_O = (bin_density_O < 0.05)
+    # rhoO_vapour = np.mean(bin_density_O[mask_vapour_O])
+    # mask_vapour_I = (bin_density_I < 0.05)
+    # rhoI_vapour = np.mean(bin_density_I[mask_vapour_I])
     
-    fitness = evaluate_fitness(rhoO_center, rhoI_center, rhoO_vapour, rhoI_vapour, s=0)
-    print(fitness)
+    # fitness = evaluate_fitness(rhoO_center, rhoI_center, rhoO_vapour, rhoI_vapour, s=0)
+    # print(fitness)
+
+    # generate_children(5, 8, np.array([['ASDFS', '0.45'], ['JHSGD', '0.456'], ['HSJDF', '0.23'], ['HJGSD', '0.352'],
+    #                                   ['SGHJD', '0.64'], ['JHSDF', '0.353'], ['HSGFJ', '0.75'], ['HSDFG', '0.566']]))
