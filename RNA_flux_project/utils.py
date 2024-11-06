@@ -368,6 +368,28 @@ def generate_children(N_tour, num_parents, population):
     return children
 
 
+def compute_SCD(seq):
+    """
+    Compute sequence charge decoration parameter for a given sequence
+    The equation can be found in this paper: https://doi.org/10.1063/1.4929391 eq.(14)
+    """
+    N = len(seq) # Length of protein
+    
+    # Load amino acid dictionary
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        amino_acid_dict = json.load(f)
+
+    SCD = 0.
+    for m in range(1,N):
+        qm = amino_acid_dict[seq[m]]["charge"]
+        for n in range(m):
+            qn = amino_acid_dict[seq[n]]["charge"]
+            SCD += qm * qn * (m-n)**0.5
+    SCD /= N
+    
+    return SCD
+
 
 if __name__ == "__main__":
     print("Executing function calls from within the script")
@@ -435,3 +457,7 @@ if __name__ == "__main__":
 
     # generate_children(5, 8, np.array([['ASDFS', '0.45'], ['JHSGD', '0.456'], ['HSJDF', '0.23'], ['HJGSD', '0.352'],
     #                                   ['SGHJD', '0.64'], ['JHSDF', '0.353'], ['HSGFJ', '0.75'], ['HSDFG', '0.566']]))
+
+
+    scd = compute_SCD("KKEEKEKEEEKEEEEEEKKKKEEKEKEKKKEKKEEEKKKEEKKKKEEEKK")
+    
