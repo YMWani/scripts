@@ -459,5 +459,6 @@ if __name__ == "__main__":
     #                                   ['SGHJD', '0.64'], ['JHSDF', '0.353'], ['HSGFJ', '0.75'], ['HSDFG', '0.566']]))
 
 
-    scd = compute_SCD("KKEEKEKEEEKEEEEEEKKKKEEKEKEKKKEKKEEEKKKEEKKKKEEEKK")
+    scd = compute_SCD("E"*25+"K"*25)
+    print(scd)
     
