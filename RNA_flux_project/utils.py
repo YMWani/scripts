@@ -391,6 +391,38 @@ def compute_SCD(seq):
     return SCD
 
 
+def extract_sequence_composition(seq):
+    """
+    description
+    """
+    Nm = len(seq)
+    glycine = 0.
+    negative = 0.
+    neutral = 0.
+    neutral_with_pi = 0.
+    positive = 0.
+    positive_with_pi = 0.
+    aromatic = 0.
+    for char in seq:
+        if char == "G":
+            glycine += 1
+        elif char in ["D", "E"]:
+            negative += 1
+        elif char in ["A", "C", "I", "L", "M", "P", "S", "T", "V"]:
+            neutral += 1
+        elif char in ["N", "Q"]:
+            neutral_with_pi += 1
+        elif char == "K":
+            positive += 1
+        elif char in ["H", "R"]:
+            positive_with_pi += 1
+        elif char in ["F", "W", "Y"]:
+            aromatic += 1
+        else:
+            print("Amino acid not found!!")
+    return glycine/Nm, negative/Nm, neutral/Nm, neutral_with_pi/Nm, positive/Nm, positive_with_pi/Nm, aromatic/Nm
+
+
 if __name__ == "__main__":
     print("Executing function calls from within the script")
     """                             ****** SECTION *******
@@ -459,6 +491,8 @@ if __name__ == "__main__":
     #                                   ['SGHJD', '0.64'], ['JHSDF', '0.353'], ['HSGFJ', '0.75'], ['HSDFG', '0.566']]))
 
 
-    scd = compute_SCD("E"*25+"K"*25)
-    print(scd)
+    # scd = compute_SCD("E"*25+"K"*25)
+    # print(scd)
     
+    glycine, negative, neutral, neutral_with_pi, positive, positive_with_pi, aromatic = extract_sequence_composition("FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF")
+    print(glycine, negative, neutral, neutral_with_pi, positive, positive_with_pi, aromatic)
