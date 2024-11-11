@@ -70,7 +70,7 @@ def mutate_sequence(sequence, probability):
 def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     """
     This function creates a LAMMPS config file that contains two chains (sequence1 & sequence2)
-    placed in straing line configuration on two opposite ends of the simulation box.
+    placed in straight line configuration on two opposite ends of the simulation box.
 
     Parameters:
     - sequence1 (str): The first protein sequence.
@@ -93,8 +93,7 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     num_atoms = chain1_length + chain2_length
     num_bonds = (chain1_length - 1) + (chain2_length-1)
 
-    num_atom_types = 40 # This is by construction of the potentials.dat file.
-    # This was done so that the potentials could be maybe tuned for folded domains.
+    num_atom_types = 20
 
     out = open(f'{outfile}','w')
     out.write('LAMMPS data file for IDP\n\n')
@@ -105,8 +104,10 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     out.write('1 bond types\n\n')
 
     # Simulation box size
-    min_box = max(chain1_length, chain2_length) * -3
-    max_box = max(chain1_length, chain2_length) * 3
+    min_box = max(chain1_length, chain2_length) * 0
+    max_box = max(chain1_length, chain2_length) * 6
+    # min_box = max(chain1_length, chain2_length) * -3
+    # max_box = max(chain1_length, chain2_length) * 3
 
     out.write('%5f   %5f  xlo xhi\n'%(min_box,max_box))
     out.write('%5f   %5f  ylo yhi\n'%(min_box,max_box))
