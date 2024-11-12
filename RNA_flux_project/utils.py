@@ -394,7 +394,14 @@ def compute_SCD(seq):
 
 def extract_sequence_composition(seq):
     """
-    description
+    Extract the AA coposition of a given sequence. The properties extracted are:
+    1. Glycine
+    2. Negative
+    3. Neutral
+    4. Neutral with pi electrons
+    5. Positive
+    6. Positive with pi electrons
+    7. Aromatic
     """
     Nm = len(seq)
     glycine = 0.
@@ -422,6 +429,164 @@ def extract_sequence_composition(seq):
         else:
             print("Amino acid not found!!")
     return glycine/Nm, negative/Nm, neutral/Nm, neutral_with_pi/Nm, positive/Nm, positive_with_pi/Nm, aromatic/Nm
+
+
+def read_trajectory(file_name):
+    '''
+    Reads in the unwrapped coordinates from the last frame of a LAMMPS trajectory file.
+    Returns a tuple with two arrays:
+    1. Box bounds as a numpy array with the format:
+        [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
+    2. Atom data as a numpy array with tuples of the format:
+        (atom number, molecule ID, type, charge, x, y, z)
+    3. The highest molecule ID
+    '''
+    coords = []
+    box_bounds = []
+    last_timestep_index = None
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+
+    # Find the last occurrence of "ITEM: TIMESTEP" which indicates the start of the last frame
+    for i in range(len(lines)):
+        if "ITEM: TIMESTEP" in lines[i]:
+            last_timestep_index = i
+
+    if last_timestep_index is None:
+        raise ValueError("No timestep found in the file.")
+
+    # Read the box bounds from the last frame
+    box_start_index = last_timestep_index + 5  # Skipping TIMESTEP, NUMBER OF ATOMS, and BOX BOUNDS headers
+    for i in range(box_start_index, box_start_index + 3):
+        bounds = [float(val) for val in lines[i].strip().split()]
+        box_bounds.append(bounds)
+
+    # Read atom data from the last frame
+    atom_data_start = box_start_index + 3  # Start of the atom data
+    reading_atoms = False
+    highest_mol_id = 0
+
+    for line in lines[atom_data_start:]:
+        if "ITEM: ATOMS" in line:
+            reading_atoms = True
+            continue
+        elif "ITEM:" in line:
+            break  # Stop reading when another section starts
+        elif reading_atoms:
+            atom_data = line.strip().split()
+            atom_number = int(atom_data[0])
+            mol_id = int(atom_data[1])
+            atom_type = int(atom_data[2])
+            charge = float(atom_data[3])
+            x = float(atom_data[4])
+            y = float(atom_data[5])
+            z = float(atom_data[6])
+
+            # Append the tuple to the list
+            coords.append((atom_number, mol_id, atom_type, charge, x, y, z))
+
+            if mol_id > highest_mol_id:
+                highest_mol_id = mol_id
+
+    return box_bounds, coords, highest_mol_id
+    
+def read_config(file_name):
+    '''
+    Reads a LAMMPS configuration file and extracts the number of atoms, number of bonds,
+    and bond information.
+
+    Returns:
+    - num_atoms: The number of atoms in the configuration file.
+    - num_bonds: The number of bonds in the configuration file.
+    - bonds: A numpy array of tuples containing the bond information.
+        Each tuple has the form (bond ID, bond type, first atom ID, second atom ID).
+    '''
+    num_atoms = 0
+    num_bonds = 0
+    bonds = []
+    in_bond_section = False
+
+    with open(file_name, 'r') as file:
+        for line in file:
+            line = line.strip()
+
+            # Read number of atoms
+            if 'atoms' in line and num_atoms == 0:
+                num_atoms = int(line.split()[0])
+
+            # Read number of bonds
+            elif 'bonds' in line and num_bonds == 0:
+                num_bonds = int(line.split()[0])
+
+            # Read bond information
+            elif 'Bonds' in line:
+                in_bond_section = True
+                continue  # Skip the "Bonds" header
+
+            # Start reading bond data if in the bond section
+            if in_bond_section:
+                if len(line.split()) != 4:
+                    continue  # End of bond section
+                bond_data = [int(x) for x in line.split()]
+                bond_id = bond_data[0]
+                bond_type = bond_data[1]
+                first_atom_id = bond_data[2]
+                second_atom_id = bond_data[3]
+                bonds.append((bond_id, bond_type, first_atom_id, second_atom_id))
+
+    return num_atoms, num_bonds, bonds
+
+def write_slab_config(required_box_bounds,
+                      protein_coords, 
+                      num_atoms, 
+                      num_bonds, 
+                      bond_data):
+    """
+    Description
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    num_atom_types = 20
+
+    configFile = open('initialSlab.dat','w')
+    configFile.write('LAMMPS data file for slab of IDP\n\n')
+
+    # Overall data
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n')
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n')
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(required_box_bounds[0][0],required_box_bounds[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(required_box_bounds[1][0],required_box_bounds[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(required_box_bounds[2][0],required_box_bounds[2][1]))
+    
+    # Particle masses
+    configFile.write('Masses\n\n')
+    for key, value in aa_dict.items():
+        configFile.write(f"   {value.get('id')} {value.get('mass')}\n")
+
+    # Particle positions
+    configFile.write('\nAtoms\n\n')
+    
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+
+    # Bond data
+    configFile.write('\nBonds\n\n')
+
+    for bond_id, bond_type, first_atom_id, second_atom_id in bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+    
+    # Close file
+    configFile.close()    
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -495,5 +660,16 @@ if __name__ == "__main__":
     # scd = compute_SCD("E"*25+"K"*25)
     # print(scd)
     
-    glycine, negative, neutral, neutral_with_pi, positive, positive_with_pi, aromatic = extract_sequence_composition("FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF")
-    print(glycine, negative, neutral, neutral_with_pi, positive, positive_with_pi, aromatic)
+    # glycine, negative, neutral, neutral_with_pi, positive, positive_with_pi, aromatic = extract_sequence_composition("FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF")
+    # print(glycine, negative, neutral, neutral_with_pi, positive, positive_with_pi, aromatic)
+
+    # box_bounds, coords, highest_mol_id = read_trajectory("result.lammpstrj")
+    # num_atoms, num_bonds, bonds = read_config("final-structure.dat")
+
+
+    # write_slab_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
+    #                   coords,
+    #                   num_atoms,
+    #                   num_bonds,
+    #                   bonds)
+    
