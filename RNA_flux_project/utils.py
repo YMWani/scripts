@@ -489,7 +489,8 @@ def read_trajectory(file_name):
                 highest_mol_id = mol_id
 
     return box_bounds, coords, highest_mol_id
-    
+
+
 def read_config(file_name):
     '''
     Reads a LAMMPS configuration file and extracts the number of atoms, number of bonds,
@@ -535,6 +536,7 @@ def read_config(file_name):
                 bonds.append((bond_id, bond_type, first_atom_id, second_atom_id))
 
     return num_atoms, num_bonds, bonds
+
 
 def write_slab_config(required_box_bounds,
                       protein_coords, 
