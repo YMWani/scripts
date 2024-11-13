@@ -150,50 +150,71 @@ class sphere:
         for i,r0 in enumerate(self.r0s):
             self.bondIds[np.isclose(dr,r0)] = i
 
-def render_geometry(positions, bonds, bondId, bt, r0s, fname):
-    import hoomd
-    hoomd.context.initialize("--notice-level=0")
-    # bt = ['b{}'.format(i) for i in range(len(r0s))]
-    snapshot = hoomd.data.make_snapshot(N=len(positions),
-                                        box=hoomd.data.boxdim(L=100),
-                                        particle_types=['A','B','C'],
-                                        bond_types=bt)
-    snapshot.particles.position[:] = positions
-    snapshot.particles.mass[:] = 5.
-    snapshot.particles.typeid[:] = 0
-    snapshot.particles.typeid[-1] = 1
-    snapshot.particles.diameter[:] = 1.
-    snapshot.particles.diameter[-1] = 6.
-    snapshot.bonds.resize(len(bonds))
-    snapshot.bonds.group[:] = bonds
-    snapshot.bonds.typeid[:] = bondId
-    hoomd.init.read_snapshot(snapshot)
-    all = hoomd.group.all()
 
-    d = hoomd.dump.gsd(fname, period=None, group=all, overwrite=True)
-    hoomd.run(0)
+def write_xyz_file(positions, fname):
+    # Number of atoms
+    num_atoms = positions.shape[0]
+    # Start writing data
+    xyz = open(fname,'w')
+    xyz.write(f"{num_atoms}\n\n")
+    for pos in positions:
+        xyz.write(f"C {pos[0]} {pos[1]} {pos[2]}\n")
+    xyz.close()
+    
+
+
+# def render_geometry(positions, bonds, bondId, bt, r0s, fname):
+#     import hoomd
+#     hoomd.context.initialize("--notice-level=0")
+#     # bt = ['b{}'.format(i) for i in range(len(r0s))]
+#     snapshot = hoomd.data.make_snapshot(N=len(positions),
+#                                         box=hoomd.data.boxdim(L=100),
+#                                         particle_types=['A','B','C'],
+#                                         bond_types=bt)
+#     snapshot.particles.position[:] = positions
+#     snapshot.particles.mass[:] = 5.
+#     snapshot.particles.typeid[:] = 0
+#     snapshot.particles.typeid[-1] = 1
+#     snapshot.particles.diameter[:] = 1.
+#     snapshot.particles.diameter[-1] = 6.
+#     snapshot.bonds.resize(len(bonds))
+#     snapshot.bonds.group[:] = bonds
+#     snapshot.bonds.typeid[:] = bondId
+#     hoomd.init.read_snapshot(snapshot)
+#     all = hoomd.group.all()
+
+#     d = hoomd.dump.gsd(fname, period=None, group=all, overwrite=True)
+#     hoomd.run(0)
 
 if __name__ == "__main__":
-    a = 3.0
-    subDiv = 2
+    a = 75.
+    subDiv = 4
     sphere = sphere(a, subDiv)
 
-    print(f"For a sphere of radius = {a} and {subDiv} level of discretization, the nearest neighbor distances are: {sphere.r0s} \n")
+    print(sphere.verts.shape)
+    print(sphere.verts[-1])
+    print(sphere.r0s)
+    print(np.min(sphere.r0s[:-1]))
+    print(np.max(sphere.r0s[:-1]))
+    
+    # write_xyz_file(sphere.verts[:-1], "cavity.xyz")
 
-    #Creating bond dictionary for bond harmonicsbond_lengths
-    bond_types = []
-    bond_type_lengths = {}
-    for i, bond_length in enumerate(sphere.r0s):
-        bond_type = 'bond-{}'.format(i)
-        bond_types.append(bond_type)
-        bond_type_lengths[bond_type] = bond_length
-    #Writing and saving json file
-    with open("bond_lengths.json", "w") as outfile:
-        json.dump(bond_type_lengths, outfile)
+    # print(f"For a sphere of radius = {a} and {subDiv} level of discretization, the nearest neighbor distances are: {sphere.r0s} \n")
 
-    render_geometry(sphere.verts,
-                    sphere.bondList,
-                    sphere.bondIds,
-                    bond_types,
-                    sphere.r0s,
-                    f"Shape.gsd")
+    # #Creating bond dictionary for bond harmonicsbond_lengths
+    # bond_types = []
+    # bond_type_lengths = {}
+    # for i, bond_length in enumerate(sphere.r0s):
+    #     bond_type = 'bond-{}'.format(i)
+    #     bond_types.append(bond_type)
+    #     bond_type_lengths[bond_type] = bond_length
+    # #Writing and saving json file
+    # with open("bond_lengths.json", "w") as outfile:
+    #     json.dump(bond_type_lengths, outfile)
+
+    # render_geometry(sphere.verts,
+    #                 sphere.bondList,
+    #                 sphere.bondIds,
+    #                 bond_types,
+    #                 sphere.r0s,
+    #                 f"Shape.gsd")

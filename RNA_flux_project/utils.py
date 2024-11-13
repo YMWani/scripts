@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import pathlib
 import random
+from generate_sphere import sphere
 current_dir = pathlib.Path(__file__).resolve().parent
 plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
 
@@ -428,7 +429,13 @@ def extract_sequence_composition(seq):
             aromatic += 1
         else:
             print("Amino acid not found!!")
-    return glycine/Nm, negative/Nm, neutral/Nm, neutral_with_pi/Nm, positive/Nm, positive_with_pi/Nm, aromatic/Nm
+    return {"glycine": glycine/Nm,
+            "negative": negative/Nm, 
+            "neutral": neutral/Nm, 
+            "neutral_with_pi": neutral_with_pi/Nm, 
+            "positive": positive/Nm, 
+            "positive_with_pi": positive_with_pi/Nm, 
+            "aromatic": aromatic/Nm}
 
 
 def read_trajectory(file_name):
@@ -490,7 +497,6 @@ def read_trajectory(file_name):
 
     return box_bounds, coords, highest_mol_id
 
-
 def read_config(file_name):
     '''
     Reads a LAMMPS configuration file and extracts the number of atoms, number of bonds,
@@ -537,7 +543,6 @@ def read_config(file_name):
 
     return num_atoms, num_bonds, bonds
 
-
 def write_slab_config(required_box_bounds,
                       protein_coords, 
                       num_atoms, 
@@ -569,7 +574,7 @@ def write_slab_config(required_box_bounds,
     # Particle masses
     configFile.write('Masses\n\n')
     for key, value in aa_dict.items():
-        configFile.write(f"   {value.get('id')} {value.get('mass')}\n")
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
 
     # Particle positions
     configFile.write('\nAtoms\n\n')
@@ -587,7 +592,109 @@ def write_slab_config(required_box_bounds,
     configFile.close()    
 
 
+def gen_seq_based_cavity(seq, diameter, subDiv=4):
+    # First create a discrete particle model sphere 
+    shape = sphere(diameter/2., subDiv)
+    
+    # Extract composition of the entered sequence
+    composition = extract_sequence_composition(seq)
+    
+    # Assign atom types to the surface monomers
+    category_dict = {
+        "glycine" : ["G"],
+        "negative" : ["D", "E"],
+        "neutral" : ["A", "C", "I", "L", "M", "P", "S", "T", "V"],
+        "neutral_with_pi" : ["N", "Q"],
+        "positive" : ["K"],
+        "positive_with_pi" : ["H", "R"],
+        "aromatic" : ["F", "W", "Y"]
+    }
+    atom_types = []
+    gen_seq = ""
+    for _ in range(shape.verts.shape[0]):
+        # Choose a random category based on its probability
+        category = random.choices(list(composition.keys()), weights=list(composition.values()))[0]
+        
+        # Select an amino acid randomly from the chosen category
+        amino_acid = random.choice(category_dict[category])
 
+        gen_seq += amino_acid
+        atom_types.append(amino_acid)
+    # Composition of the generated sequence (if needed)
+    composition_gen_seq = extract_sequence_composition(gen_seq)
+
+    return shape.verts, atom_types
+
+
+def write_cavity_config(simBox, cavity_positions, cavity_types, protein_coords=None,
+                        num_atom_types = 40, protein_bond_data=None):
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    configFile = open('cavity_config.dat','w')
+    configFile.write('LAMMPS data file for spherical cavity to hold RNA chains\n\n')
+
+    # Overall data
+    if protein_coords == None:
+        num_atoms = cavity_positions.shape[0]
+    else:
+        num_atoms = cavity_positions.shape[0] + protein_coords.shape[0]
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n')
+    
+    if protein_bond_data == None:
+        num_bonds = 0
+    else:
+        num_bonds = len(protein_bond_data)    
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n')
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+    
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+
+     # Particle positions
+    configFile.write('\nAtoms\n\n')
+
+    # First assign positions of the cavity
+    mol_id = 1 # Let's assign the cavity as mol_id = 1
+    for index, pos in enumerate(cavity_positions):
+        atom_id = index + 1
+        atom_type = aa_dict[cavity_types[index]]["id"]
+        atom_charge = aa_dict[cavity_types[index]]["charge"]
+        # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
+        # We need to recenter it to the center of the new simulation box
+        xcoord = pos[0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.)
+        ycoord = pos[1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.)
+        zcoord = pos[2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.)
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+    
+    # If protein positions are also given, then assign the positions of the proteins as well
+    if protein_coords:
+        for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+            configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+    
+    # Bond data
+    # Only the proteins will have bonds
+    if protein_bond_data:
+        configFile.write('\nBonds\n\n')
+
+        for bond_id, bond_type, first_atom_id, second_atom_id in protein_bond_data:
+            configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+    
+    # Close file
+    configFile.close()
 
 
 
@@ -675,3 +782,9 @@ if __name__ == "__main__":
     #                   num_bonds,
     #                   bonds)
     
+    # positions, types = gen_seq_based_cavity("FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF", 150.)
+    # print(positions.shape)
+    # # print(types)
+
+    # write_cavity_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
+    #                     positions, types)
