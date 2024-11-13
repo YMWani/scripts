@@ -732,6 +732,81 @@ def write_cavity_config(simBox, cavity_positions, cavity_types, protein_coords=N
     configFile.close()
 
 
+def write_single_chain_config(sequence, outfile="config.dat"):
+    """
+    Create a single chain LAMMPS config file for a gievn sequence
+
+    Arguments:
+        - sequence (str): single character AA seq.
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    chain_length = len(sequence)
+
+    num_atoms = chain_length
+    num_bonds = chain_length - 1
+
+    num_atom_types = 20
+
+    out = open(f'{outfile}','w')
+    out.write('LAMMPS data file for IDP\n\n')
+    # General parameters
+    out.write(f'{num_atoms} atoms\n')
+    out.write(f'{num_bonds} bonds\n\n')
+    out.write(f'{num_atom_types} atom types\n')
+    out.write('1 bond types\n\n')
+
+    # Simulation box size
+    min_box = 0.0
+    max_box = chain_length * 6.0
+
+    out.write('%5f   %5f  xlo xhi\n'%(min_box,max_box))
+    out.write('%5f   %5f  ylo yhi\n'%(min_box,max_box))
+    out.write('%5f   %5f  zlo zhi\n\n'%(min_box,max_box))
+
+    # Particle masses
+    out.write('Masses\n\n')
+    for key, value in aa_dict.items():
+        out.write(f"{value.get('id')} {value.get('mass')}\n")
+    
+    # Particle positions
+    out.write('\nAtoms\n\n')
+    # Place chain in straight line with the distance between the monomers
+    # approximately equal to the eq. bond length
+    r0 = 4.0
+
+    mol_id = 1
+    xcoord = min_box
+    ycoord = min_box + r0
+    zcoord = min_box + r0
+    
+    idx = 1
+    for aa in sequence:
+        xcoord += r0
+        
+        atom_id = idx
+        atom_type = aa_dict[f"{aa}"]["id"]
+        atom_charge = aa_dict[f"{aa}"]["charge"]
+
+        out.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+        idx += 1
+    
+    # Bond data
+    out.write('\nBonds\n\n')
+    bond_type = 1
+    bond_id = 1
+    for atom_id in range(1, chain_length):
+        out.write('%d %d %d %d\n' %(bond_id,bond_type,atom_id,atom_id+1))
+        bond_id += 1
+    
+    out.close()
+
+
+
+
+
 
 if __name__ == "__main__":
     print("Executing function calls from within the script")
