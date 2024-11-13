@@ -549,7 +549,16 @@ def write_slab_config(required_box_bounds,
                       num_bonds, 
                       bond_data):
     """
-    Description
+    Create a config file for a slab simulation given the follwing information:
+    - required_box_bounds (list): A list containing the lower and upper bounds of the slab that we want to generate
+    - protein_coords (list of tuples): A list of tuples containing details for each atom
+                                      (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - num_atoms (int): Number of particles in the system
+    - num_bonds (int): Number of bonds in the system
+    - bond_data (list of tuples): Bond data for the protein chains
+                                 (bond_id, bond_type, first_atom_id, second_atom_id)
+    
+    Returns: Config file for slab simulations - "initialSlab.dat"
     """
     parent_dir = Path(__file__).parent
     with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
@@ -593,6 +602,18 @@ def write_slab_config(required_box_bounds,
 
 
 def gen_seq_based_cavity(seq, diameter, subDiv=4):
+    """
+    construct a spherical cavity of a given diameter based on the discrete particle model such that
+    the surface monomers have similar composition to the given sequence.
+
+    Arguments:
+    - seq (str): Protein sequence whose composition we want to replicate on the cavity
+    - diameter (float): Cavity diameter in Angstroms.
+
+    Output:
+    - positions (float array): Array containing the positions of the surface monomers
+    - types (str list): List containing the atom types of the surface monomers
+    """
     # First create a discrete particle model sphere 
     shape = sphere(diameter/2., subDiv)
     
@@ -627,7 +648,21 @@ def gen_seq_based_cavity(seq, diameter, subDiv=4):
 
 
 def write_cavity_config(simBox, cavity_positions, cavity_types, protein_coords=None,
-                        num_atom_types = 40, protein_bond_data=None):
+                        protein_bond_data=None, num_atom_types = 40):
+    """
+    Creates a config file for a slab containing a cavity and protein chains (None by default)
+
+    Arguments:
+    - simBox (float list): List of the lower and upper bounds for the simulation box
+    - cavity_positions (float array): Positions of the monomers of the spherical cavity
+    - cavity_types (char list): List of the atom_types of the surface monomers.
+    - protein_coords (tuple list): A list of tuples containing details for each atom of the protein chains
+                                  (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - protein_bond_data (list of tuples): Bond data for the protein chains
+                                         (bond_id, bond_type, first_atom_id, second_atom_id)
+
+    Returns: config file for LAMMPS simulation - "cavity_config.dat"
+    """
     parent_dir = Path(__file__).parent
     with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
         aa_dict = json.load(f)
