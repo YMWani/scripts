@@ -669,7 +669,7 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
         aa_dict = json.load(f)
     
     configFile = open('cavity_config.dat','w')
-    configFile.write('LAMMPS data file for spherical cavity to hold RNA chains\n\n')
+    configFile.write('LAMMPS data file with spherical cavity to hold RNA chains\n\n')
 
     # Overall data
     if protein_coords == None:
@@ -707,7 +707,7 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
     mol_id = 1 # Let's assign the cavity as mol_id = 1
     for index, pos in enumerate(cavity_positions):
         atom_id = index + 1
-        atom_type = aa_dict[cavity_types[index]]["id"]
+        atom_type = aa_dict[cavity_types[index]]["id"] + 20 # Add 20 for cavity monomers
         atom_charge = aa_dict[cavity_types[index]]["charge"]
         # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
         # We need to recenter it to the center of the new simulation box
@@ -718,16 +718,36 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
     
     # If protein positions are also given, then assign the positions of the proteins as well
     if protein_coords:
+        # First we need to ensure that the proteins positions are not inside the cavity
+        # Protein coords are read from trajectory file (unwrapped coordinates)
+        # Therefore, we must first wrap the coordinates in the simulation box
+        wrapped_zcoords = []
+        # Lx = simBox[0][1] - simBox[0][0]
+        # Ly = simBox[1][1] - simBox[1][0]
+        Lz = simBox[2][1] - simBox[2][0]
         for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
-            configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+            zw = zcoord - (zcoord//Lz)*Lz
+            wrapped_zcoords.append(zw)
+        wrapped_zcoords = np.array(wrapped_zcoords)
+        # Calculate the shift to place the protein condensate on the right side of cavity
+        zw_min = np.min(wrapped_zcoords)
+        zc_max = np.max(cavity_positions[:,2])
+        z_buff = 10.0
+        delta_z = zc_max + z_buff - zw_min # We add this quantity to unwrapped zcoord
+
+        # Since Cavity is already placed we need to adjust atom_id and mol_id accordingly
+        num_cavity_atoms = cavity_positions.shape[0]
+        for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+            configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, mol_id+1, atom_type, atom_charge, xcoord, ycoord, zcoord+delta_z))
     
     # Bond data
     # Only the proteins will have bonds
     if protein_bond_data:
         configFile.write('\nBonds\n\n')
-
+        # Similar to the positions, we need to adjust atom_id here.
+        # No need to worry about bond_id since cavity monomers are not bonded
         for bond_id, bond_type, first_atom_id, second_atom_id in protein_bond_data:
-            configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+            configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id+num_cavity_atoms,second_atom_id+num_cavity_atoms))
     
     # Close file
     configFile.close()
