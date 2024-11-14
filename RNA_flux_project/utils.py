@@ -644,7 +644,8 @@ def gen_seq_based_cavity(seq, diameter, subDiv=4):
     # Composition of the generated sequence (if needed)
     composition_gen_seq = extract_sequence_composition(gen_seq)
 
-    return shape.verts, atom_types
+    # We exclude the last element since the particle is at the center of the cavity
+    return shape.verts[:-1], atom_types[:-1]
 
 
 def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, protein_coords=None,
