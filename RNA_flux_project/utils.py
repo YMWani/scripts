@@ -647,7 +647,7 @@ def gen_seq_based_cavity(seq, diameter, subDiv=4):
     return shape.verts, atom_types
 
 
-def write_cavity_config(simBox, cavity_positions, cavity_types, protein_coords=None,
+def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, protein_coords=None,
                         protein_bond_data=None, num_atom_types = 40):
     """
     Creates a config file for a slab containing a cavity and protein chains (None by default)
@@ -730,6 +730,11 @@ def write_cavity_config(simBox, cavity_positions, cavity_types, protein_coords=N
     
     # Close file
     configFile.close()
+
+
+# def write_cavity_with_protein1and2_config(simBox, cavity_positions, cavity_types, protein_coords=None,
+#                             protein_bond_data=None, num_atom_types = 40):
+
 
 
 def write_single_chain_config(sequence, outfile="config.dat"):
