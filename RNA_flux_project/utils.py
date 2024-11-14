@@ -675,7 +675,7 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
     if protein_coords == None:
         num_atoms = cavity_positions.shape[0]
     else:
-        num_atoms = cavity_positions.shape[0] + protein_coords.shape[0]
+        num_atoms = cavity_positions.shape[0] + len(protein_coords)
     configFile.write(f'{num_atoms} atoms\n')
     configFile.write(f'{num_atom_types} atom types\n')
     
