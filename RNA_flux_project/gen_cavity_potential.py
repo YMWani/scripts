@@ -1,0 +1,102 @@
+import numpy as np
+
+"""
+We want to create a file containing the pair coefficients for the cavity simulations. 
+
+Basically cavity consists of 20 different monomers that have the exact interaction parameters
+as AA in MPIPI model. We intend to do this since we don't want the RNA molecules to interact
+with the cavity monomers.
+
+Construction:
+Atom types - 44 (20 AA, 20 cavity AA, 4 RNA bases)
+"""
+
+# NOTE: Current script only for AA and cavity monomers. Does not include RNA.
+
+# Open native MPIPI potentials file
+potentials_file = open("potentials.dat", "r")
+
+# First set charge of the different atoms
+charges = []
+bonds = []
+pair_style = []
+wf = np.full((20, 20, 5), np.nan)
+coul = []
+
+for line in potentials_file:
+    if "charge" in line:
+        parts = line.strip().split()
+        charges.append((parts[2], parts[4]))
+
+    elif "bond_coeff" in line:
+        parts = line.strip().split()
+        bonds.append((parts[1], parts[2], parts[3]))
+
+    elif "pair_style" in line:
+        parts = line.strip().split()
+        pair_style = parts
+    
+    elif "pair_coeff" and "wf/cut" in line:
+        parts = line.strip().split()
+        wf[int(parts[1]) - 1, int(parts[2]) - 1, 0] = float(parts[4])
+        wf[int(parts[1]) - 1, int(parts[2]) - 1, 1] = float(parts[5])
+        wf[int(parts[1]) - 1, int(parts[2]) - 1, 2] = int(parts[6])
+        wf[int(parts[1]) - 1, int(parts[2]) - 1, 3] = int(parts[7])
+        wf[int(parts[1]) - 1, int(parts[2]) - 1, 4] = float(parts[8])
+
+        
+        
+    elif "pair_coeff" and "coul/debye" in line:
+        parts = line.strip().split()
+        coul.append((parts[1], parts[2], parts[4]))
+
+    else:
+        continue
+
+
+# Write new potential file that accounts for the cavity
+outfile = open("potential_cavity_and_proteins.dat", 'w')
+
+# AA for protein chains
+for type, charge in charges:
+    outfile.write(f"set type {type} charge {charge}\n")
+# AA for cavity monomers
+for type, charge in charges:
+    outfile.write(f"set type {int(type)+20} charge {charge}\n")
+
+# Bond coeff
+outfile.write("\n")
+outfile.write(f"bond_coeff {bonds[0][0]} {bonds[0][1]} {bonds[0][2]}\n")
+
+# Pair styles
+outfile.write("\n")
+outfile.write(f"{pair_style[0]} {pair_style[1]} {pair_style[2]} {pair_style[3]} {pair_style[4]} {pair_style[5]} {pair_style[6]}\n")
+
+# WF pair coeff. (Here we need to carefully account for the cavity monomers)
+outfile.write("\n")
+for idx1 in range(40):
+    for idx2 in range(idx1, 40):
+        i = idx1%20
+        j = idx2%20
+        values = wf[i,j]
+        if not np.any(np.isnan(values)):
+            # print(f"{idx1+1} {idx2+1}       {i+1} {j+1}        ", values)
+            outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+        else:
+            values = wf[j,i]
+            # print(f"{idx1+1} {idx2+1}       {i+1} {j+1}        ", values)
+            outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+
+# coul/debye coeff.
+outfile.write("\n")
+# Atom types that have charges
+charged_types = np.unique(np.array([int(x[0]) for x in coul]))
+charged_types_additional = charged_types+20
+charged_types = np.concatenate((charged_types, charged_types_additional))
+
+for idx1 in range(charged_types.shape[0]):
+    for idx2 in range(idx1, charged_types.shape[0]):
+        # print(f"{charged_types[idx1]} {charged_types[idx2]}")
+        outfile.write(f"pair_coeff {charged_types[idx1]} {charged_types[idx2]} coul/debye 35.\n")    
+
+outfile.close()
