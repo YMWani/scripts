@@ -662,13 +662,13 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
     - protein_bond_data (list of tuples): Bond data for the protein chains
                                          (bond_id, bond_type, first_atom_id, second_atom_id)
 
-    Returns: config file for LAMMPS simulation - "cavity_config.dat"
+    Returns: config file for LAMMPS simulation - "cavity_protein1_config.dat"
     """
     parent_dir = Path(__file__).parent
     with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
         aa_dict = json.load(f)
     
-    configFile = open('cavity_config.dat','w')
+    configFile = open('cavity_protein1_config.dat','w')
     configFile.write('LAMMPS data file with spherical cavity to hold RNA chains\n\n')
 
     # Overall data
