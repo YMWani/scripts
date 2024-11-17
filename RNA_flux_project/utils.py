@@ -731,7 +731,7 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
         wrapped_zcoords = np.array(wrapped_zcoords)
         # Calculate the shift to place the protein condensate on the right side of cavity
         zw_min = np.min(wrapped_zcoords)
-        zc_max = np.max(cavity_positions[:,2])
+        zc_max = np.max(cavity_positions[:,2]) + Lz/2.
         z_buff = 10.0
         delta_z = zc_max + z_buff - zw_min # We add this quantity to unwrapped zcoord
 
