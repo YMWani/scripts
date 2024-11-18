@@ -783,7 +783,7 @@ def write_cavity_with_protein1and2_config(simBox,
     configFile.write('LAMMPS data file with spherical cavity to hold RNA chains\n\n')
 
     # Overall data
-    num_atoms = len(cavity_inner_prot_coords) + len(outer_protein_coords)
+    num_atoms = len(cavity_inner_prot_coords) + 2*len(outer_protein_coords)
     configFile.write(f'{num_atoms} atoms\n')
     configFile.write(f'{num_atom_types} atom types\n')
     
@@ -843,6 +843,7 @@ def write_cavity_with_protein1and2_config(simBox,
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in outer_protein_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+last_atom_id, mol_id+last_mol_id, atom_type,
                                                        atom_charge, xcoord, ycoord, zcoord+delta_z))
+
 
     # Bond data
     configFile.write('\nBonds\n\n')
