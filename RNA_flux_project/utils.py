@@ -787,7 +787,7 @@ def write_cavity_with_protein1and2_config(simBox,
     configFile.write(f'{num_atoms} atoms\n')
     configFile.write(f'{num_atom_types} atom types\n')
     
-    num_bonds = len(cavity_inner_protein_bond_data) + len(outer_protein_bond_data)
+    num_bonds = len(cavity_inner_protein_bond_data) + 2*len(outer_protein_bond_data)
     configFile.write(f'{num_bonds} bonds\n')
     configFile.write('1 bond types\n\n')
 
@@ -851,9 +851,20 @@ def write_cavity_with_protein1and2_config(simBox,
     for bond_id, bond_type, first_atom_id, second_atom_id in cavity_inner_protein_bond_data:
         configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
     # Outer proteins: Atom ids need to be ajusted for the cavity & inner protein monomers
+    # Right side
+    atom_id_counter = len(cavity_inner_prot_coords)
+    bond_id_counter = len(cavity_inner_protein_bond_data)
     for bond_id, bond_type, first_atom_id, second_atom_id in outer_protein_bond_data:
-        configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id+num_previous_atoms,
-                                           second_atom_id+num_previous_atoms))
+        configFile.write('%d %d %d %d\n' %(bond_id+bond_id_counter,bond_type,
+                                           first_atom_id+atom_id_counter,
+                                           second_atom_id+atom_id_counter))
+    # Left side
+    atom_id_counter += len(outer_protein_coords)
+    bond_id_counter += len(outer_protein_coords)
+    for bond_id, bond_type, first_atom_id, second_atom_id in outer_protein_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id+bond_id_counter,bond_type,
+                                           first_atom_id+atom_id_counter,
+                                           second_atom_id+atom_id_counter))    
     
     # Close file
     configFile.close()
