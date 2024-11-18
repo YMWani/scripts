@@ -826,12 +826,11 @@ def write_cavity_with_protein1and2_config(simBox,
     zci_max = np.max([t[6] for t in cavity_inner_prot_coords]) # maximum z position of cavity & inner protein cond.
     z_buff = 1.0
     delta_z = zci_max + z_buff - zw_min # We add this quantity to unwrapped zcoord
-
     # Since Cavity and inner proteins are already placed we need to adjust atom_id and mol_id accordingly
     num_previous_atoms = len(cavity_inner_prot_coords)
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in outer_protein_coords:
-        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_previous_atoms, mol_id+cavity_inner_protein_highest_molid, atom_type,
-                                                       atom_charge, xcoord, ycoord, zcoord+delta_z))
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_previous_atoms, mol_id+cavity_inner_protein_highest_molid,
+                                                       atom_type, atom_charge, xcoord, ycoord, zcoord+delta_z))
         last_atom_id = atom_id+num_previous_atoms
         last_mol_id = mol_id+cavity_inner_protein_highest_molid
     
@@ -839,7 +838,6 @@ def write_cavity_with_protein1and2_config(simBox,
     zw_max = np.max(wrapped_zcoords) # maximum z position of the outer condensate
     zci_min = np.min([t[6] for t in cavity_inner_prot_coords]) # minimum z position of cavity & inner protein cond.
     delta_z = zci_min - zw_max - z_buff # We add this quantity to unwrapped zcoord
-
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in outer_protein_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+last_atom_id, mol_id+last_mol_id, atom_type,
                                                        atom_charge, xcoord, ycoord, zcoord+delta_z))
