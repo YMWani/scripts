@@ -3,6 +3,7 @@ import random
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import sem
 from scipy.optimize import curve_fit
 import pathlib
 import random
@@ -112,17 +113,16 @@ def compute_averaged_density_profile(density_prof):
     - bin_density: bin densities
     """
     avg_density_prof = np.mean(density_prof, axis=0) # Assuming no noise in the data, so we don't discard any part of it
-    
+    sem_density_prof = sem(density_prof[:,:,1], axis=0)
     # Shift the density profile such that it is centered.
     # Find the center of mass of the density profile
     bins = avg_density_prof[:,0]
     bin_density = avg_density_prof[:,1]
     cm = np.sum(bins * bin_density) / np.sum(bin_density)
     # Adjust the bin positions such that the COM is at the center of the box (i.e. 0.5)
-    bins -= cm - 0.5
-    bins[bins < 0] += 1.0
-    
-    return bins, bin_density
+    bins -= (cm - 0.51)
+    bins[bins <= 0] += 1.0
+    return bins, bin_density, sem_density_prof
 
 
 def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
@@ -185,21 +185,24 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
 
 
 
+
+
 if __name__ == "__main__":
     # Protein
     tsteps, densities = parse_density_profile_file("/Users/yw9071_admin/Documents/tau-protein-project/Tau_slabs/Tau_2.5_PEG/densities_chunked2_protein.dat")
-    bins, bin_density = compute_averaged_density_profile(densities)
+    bins, bin_density, bin_density_sem = compute_averaged_density_profile(densities)
     left_interf, right_interf, fine_coords, fitted_profile = find_interfaces(bins, bin_density)
     # PEG
     tsteps_, densities_ = parse_density_profile_file("/Users/yw9071_admin/Documents/tau-protein-project/Tau_slabs/Tau_2.5_PEG/densities_chunked2_PEG.dat")
-    bins_, bin_density_ = compute_averaged_density_profile(densities_)
+    bins_, bin_density_, bin_density_sem_ = compute_averaged_density_profile(densities_)
     
     fig, ax = plt.subplots()
     # protein
-    ax.plot(bins, bin_density, marker='o', linestyle='', markerfacecolor='none')
-    ax.plot(fine_coords, fitted_profile)
+    ax.fill_between(bins, bin_density-bin_density_sem, bin_density+bin_density_sem)
+    # ax.plot(bins, bin_density, marker='o', linestyle='', markerfacecolor='none')
+    # ax.plot(fine_coords, fitted_profile)
     # PEG
-    ax.plot(bins_, bin_density_, marker='s', linestyle='', markerfacecolor='none')
+    # ax.plot(bins_, bin_density_, marker='s', linestyle='', markerfacecolor='none')
     
     ax.set_xlabel(r"$z/L_\mathrm{z}$")
     ax.set_ylabel(r"$\rho \, (\mathrm{g/cm^3})$")
