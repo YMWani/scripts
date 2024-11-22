@@ -1084,7 +1084,7 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
     # Calculate the shift to place the protein condensate on the right side of cavity
     zw_min = np.min(wrapped_zcoords)
     zc_max = np.max(cavity_positions[:,2]) + Lz/2. # Since cavity is originally centered at origin
-    z_buff = 1.0
+    z_buff = 5.0
     delta_z = zc_max + z_buff - zw_min - tmp # We add this quantity to unwrapped zcoord
 
     # Since Cavity is already placed we need to adjust atom_id and mol_id accordingly
@@ -1097,7 +1097,7 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
     # Calculate the shift to place the protein condensate on the left side of cavity
     zw_max = np.max(wrapped_zcoords)
     zc_min = np.min(cavity_positions[:,2]) - Lz/2. # Cavity originally centered at origin
-    z_buff = 1.0
+    z_buff = 5.0
     delta_z = zc_min - z_buff - zw_max - tmp
 
     # Since Cavity and proteins(right side) are already placed we need to adjust atom_id and mol_id accordingly
