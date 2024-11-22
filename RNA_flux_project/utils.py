@@ -1119,13 +1119,160 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
                                            first_atom_id+num_cavity_atoms,second_atom_id+num_cavity_atoms))
     #  ***************   2. Left side    *********************
     # We need to account for the atom ids and bond ids
-    last_bond_id = protein_bond_data[-1][0]
+    last_bond_id = max(t[0] for t in protein_bond_data) # bond data is jumbled up since taken from config file
     for bond_id, bond_type, first_atom_id, second_atom_id in protein_bond_data:
         configFile.write('%d %d %d %d\n' %(bond_id+last_bond_id, bond_type,
                                            first_atom_id+num_atoms_already_placed,second_atom_id+num_atoms_already_placed))
         
     # Close file
     configFile.close()
+
+def write_config_cuboid_cavity_with_inner_and_outer_prot(simBox,
+        cavity_inner_prot_coords, cavity_inner_protein_bond_data,
+        outer_protein_coords, outer_protein_bond_data,
+        num_atom_types = 40):
+    """
+    Creates a config file for a slab containing a cuboidal cavity with multiphasic
+    condensate surrounding it.
+
+    Arguments:
+    - simBox (float list): List of the lower and upper bounds for the simulation box
+    - cavity_inner_prot_coords (tuple list): A list of tuples containing details for
+                                    each atom of the cavity and inner protein chains
+                    (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - cavity_inner_protein_bond_data (list of tuples): Bond data for the inner protein
+                                    chains
+                                    (bond_id, bond_type, first_atom_id, second_atom_id)
+    - outer_protein_coords (tuple list): A list of tuples containing details for each
+                                    atom of the outer protein chains
+    - outer_protein_bond_data (list of tuples): Bond data for the outer protein chains
+                                    (bond_id, bond_type, first_atom_id, second_atom_id)
+    
+    Returns: config file for LAMMPS simulation - "config_cuboid_cavity_with_inner_and_outer_prot.dat"
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    configFile = open('config_cuboid_cavity_with_inner_and_outer_prot.dat','w')
+    configFile.write('LAMMPS data file with cuboidal cavity to hold RNA chains\n\n')
+
+    # Overall data
+    # Note: cavity_inner_prot_coords contains info. about both - cavity and inner proteins
+    num_atoms = len(cavity_inner_prot_coords) + 2*len(outer_protein_coords)
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n') # Atom types remain unchanged
+
+    # Note: cavity_inner_protein_bond_data contains bond info. for inner proteins    
+    num_bonds = len(cavity_inner_protein_bond_data) + 2*len(outer_protein_bond_data)
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n') # Bond types remain unchanged
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+    
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+
+    # Particle POSITIONS
+    configFile.write('\nAtoms\n\n')
+
+    # First assign positions of cavity and inner protein (already equilibrated around the cavity)
+    # We just paste the information as is since it has already been equilibrated
+    cavity_and_inner_protein_positions = [] # We need this list in the later part
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_inner_prot_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+        cavity_and_inner_protein_positions.append([xcoord, ycoord, zcoord])
+    cavity_and_inner_protein_positions = np.array(cavity_and_inner_protein_positions)
+
+    # Second, assign outer protein positions
+    # We need to add proteins on both sides of the cavity.
+    wrapped_zcoords = []
+    Lz = simBox[2][1] - simBox[2][0]
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in outer_protein_coords:
+        zw = zcoord - (zcoord//Lz)*Lz
+        wrapped_zcoords.append(zw)
+    wrapped_zcoords = np.array(wrapped_zcoords)
+
+    # There is a chance that the wrapped coordinates of the protein chains cross the PB 
+    # along z direction. For the next logic to work we need them not to cross the PB
+    tmp = 0.
+    while (np.min(wrapped_zcoords) < simBox[2][0]+0.1*Lz or np.max(wrapped_zcoords) > simBox[2][1]-0.1*Lz):
+        tmp += 50.
+        wrapped_zcoords -= 50.0
+        wrapped_zcoords -= (wrapped_zcoords//Lz)*Lz
+    
+    # ****************   1. Right side    ************************
+    # Calculate the shift to place the protein condensate on the right side of cavity
+    zw_min = np.min(wrapped_zcoords) # minima of the outer proteins (wrapped)
+    zc_max = np.max(cavity_and_inner_protein_positions[:,2]) # maxima of inner proteins
+    z_buff = 5.0 # buffer separation between the two
+    delta_z = zc_max + z_buff - zw_min - tmp # We add this quantity to unwrapped zcoord
+
+    # Since Cavity+inner_prot are already placed we need to adjust atom_id and mol_id accordingly
+    num_cavity_and_inner_prot_atoms = cavity_and_inner_protein_positions.shape[0]
+    highest_mol_id = max([t[1] for t in cavity_inner_prot_coords]) # molid is at index 1
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in outer_protein_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_and_inner_prot_atoms, 
+                                                       mol_id+highest_mol_id, atom_type, 
+                                                       atom_charge, xcoord, ycoord, zcoord+delta_z))
+
+    # ****************   2. Left side    ************************
+    # Calculate the shift to place the protein condensate on the left side of cavity
+    zw_max = np.max(wrapped_zcoords) # maxima of the outer proteins (wrapped)
+    zc_min = np.min(cavity_and_inner_protein_positions[:,2]) # minima of inner proteins
+    z_buff = 5.0 # buffer separation between the two
+    delta_z = zc_min - z_buff - zw_max - tmp
+
+    # Since Cavity and proteins(right side) are already placed we need to adjust atom_id and mol_id accordingly
+    num_atoms_already_placed = cavity_and_inner_protein_positions.shape[0] + len(outer_protein_coords)
+    last_mol_id = highest_mol_id + max([t[1] for t in outer_protein_coords]) # data can be jumbled up
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in outer_protein_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_atoms_already_placed, 
+                                                       mol_id+last_mol_id, atom_type, 
+                                                       atom_charge, xcoord, ycoord, zcoord+delta_z))
+
+
+    # BOND DATA
+    configFile.write('\nBonds\n\n')
+    # Inner proteins: Bond data already accounts for the cavity monomers
+    for bond_id, bond_type, first_atom_id, second_atom_id in cavity_inner_protein_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+    
+    # Outer protein
+    # Again, we have two sets of bond data (right side and left side)    
+    #  ***************   1. Right side    *********************
+    # We need to account for the atom ids and bond ids
+    highest_inner_prot_bond_id = max([t[0] for t in cavity_inner_protein_bond_data]) # Data can be jumbled up
+    for bond_id, bond_type, first_atom_id, second_atom_id in outer_protein_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id+highest_inner_prot_bond_id, bond_type,
+                                           first_atom_id+num_cavity_and_inner_prot_atoms,
+                                           second_atom_id+num_cavity_and_inner_prot_atoms))
+    #  ***************   2. Left side    *********************
+    # We need to account for the atom ids and bond ids
+    last_bond_id = highest_inner_prot_bond_id + max([t[0] for t in outer_protein_bond_data])
+    for bond_id, bond_type, first_atom_id, second_atom_id in outer_protein_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id+last_bond_id, bond_type,
+                                           first_atom_id+num_atoms_already_placed,second_atom_id+num_atoms_already_placed))
+    
+    # Close file
+    configFile.close()
+
+
+
+
+
+
+
+
 
 
 
