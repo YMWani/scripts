@@ -1076,10 +1076,10 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
     # There is a chance that the wrapped coordinates of the protein chains cross the PB 
     # along z direction. For the next logic to work we need them not to cross the PB
     tmp = 0.
-    while (np.min(wrapped_zcoord) < simBox[2][0]+0.1*Lz or np.max(wrapped_zcoord) > simBox[2][1]-0.1*Lz):
+    while (np.min(wrapped_zcoords) < simBox[2][0]+0.1*Lz or np.max(wrapped_zcoords) > simBox[2][1]-0.1*Lz):
         tmp += 50.
-        wrapped_zcoord -= 50.0
-        wrapped_zcoord -= (wrapped_zcoord//Lz)*Lz
+        wrapped_zcoords -= 50.0
+        wrapped_zcoords -= (wrapped_zcoords//Lz)*Lz
     
     # Calculate the shift to place the protein condensate on the right side of cavity
     zw_min = np.min(wrapped_zcoords)
