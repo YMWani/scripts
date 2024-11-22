@@ -868,7 +868,6 @@ def write_cavity_with_protein1and2_config(simBox,
     configFile.close()
 
 
-
 def write_single_chain_config(sequence, outfile="config.dat"):
     """
     Create a single chain LAMMPS config file for a gievn sequence
@@ -940,6 +939,193 @@ def write_single_chain_config(sequence, outfile="config.dat"):
     
     out.close()
 
+
+def generate_cuboid_cavity(seq, xw, yw, zw):
+    """
+    Construct a cuboidal shaped cavity where the surfaces along the xy plane are decorated with surface
+    monomers that have a similar composition as the given protein sequence. 
+    
+    Arguments:
+    - seq (str): Protein sequence whose composition we want to replicate on the cavity
+    - xw, yw, zw (float): Width of the cavity in x, y, and z direction, respectively.
+
+    Output:
+    - positions (float array): Array containing the positions of the surface monomers
+    - types (str list): List containing the atom types of the surface monomers
+    """
+    # 1. Create cavity surface
+    r0 = 3.81 # Equilibrium bond distance for protein chains
+    nx = int(xw/r0) # #segments along x direction
+    rx = xw/nx # distance between monomers in x direction
+    ny = int(yw/r0) # #segments along y direction
+    ry = yw/ny # distance between monomers in x direction
+
+    x_vals = np.linspace(0, xw, nx+1) - xw/2.
+    y_vals = np.linspace(0, yw, ny+1) - yw/2.
+    z_vals = np.repeat(zw/2., (nx+1)*(ny+1))
+    xy_pos = np.array(np.meshgrid(x_vals, y_vals)).T.reshape(-1,2)
+    pos1 = np.column_stack((xy_pos, z_vals)) # Positions for surface z=zw/2.
+    z_vals = np.repeat(-zw/2., (nx+1)*(ny+1))
+    pos2 = np.column_stack((xy_pos, z_vals)) # Positions for surface z=-zw/2.
+    positions = np.concatenate((pos1, pos2)) # Surface monomer positions for both the required faces of cavity
+
+    # 2. Extract composition of the entered sequence
+    composition = extract_sequence_composition(seq)
+    
+    # 3. Assign types for the surface monomers
+    # Assign atom types to the surface monomers
+    category_dict = {
+        "glycine" : ["G"],
+        "negative" : ["D", "E"],
+        "neutral" : ["A", "C", "I", "L", "M", "P", "S", "T", "V"],
+        "neutral_with_pi" : ["N", "Q"],
+        "positive" : ["K"],
+        "positive_with_pi" : ["H", "R"],
+        "aromatic" : ["F", "W", "Y"]
+    }
+    atom_types = []
+    gen_seq = ""
+    for _ in range(positions.shape[0]):
+        # Choose a random category based on its probability
+        category = random.choices(list(composition.keys()), weights=list(composition.values()))[0]
+        
+        # Select an amino acid randomly from the chosen category
+        amino_acid = random.choice(category_dict[category])
+
+        gen_seq += amino_acid
+        atom_types.append(amino_acid)
+    # Composition of the generated sequence (if needed)
+    composition_gen_seq = extract_sequence_composition(gen_seq)
+    
+    return positions, atom_types
+
+def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_types,
+                                               protein_coords, protein_bond_data,
+                                               num_atom_types = 40):
+    """
+    Creates a config file for a slab containing a cuboid shaped cavity at the centre of the
+    slab that is surrounded by given protein chains.
+
+    Arguments:
+    - simBox (float list): List of the lower and upper bounds for the simulation box
+    - cavity_positions (float array): Positions of the monomers of the spherical cavity
+    - cavity_types (char list): List of the atom_types of the surface monomers.
+    - protein_coords (tuple list): A list of tuples containing details for each atom of the protein chains
+                                  (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - protein_bond_data (list of tuples): Bond data for the protein chains
+                                         (bond_id, bond_type, first_atom_id, second_atom_id)
+
+    Returns: config file for LAMMPS simulation - "config_cuboid_cavity_with_inner_prot.dat"
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    configFile = open('config_cuboid_cavity_with_inner_prot.dat','w')
+    configFile.write('LAMMPS data file with cuboidal cavity to hold RNA chains\n\n')
+
+    # Overall data
+    num_atoms = cavity_positions.shape[0] + 2*len(protein_coords)
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n')
+    
+    num_bonds = 2*len(protein_bond_data)
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n')
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+    
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+
+    # Particle positions
+    configFile.write('\nAtoms\n\n')
+
+    # First assign positions of the cavity
+    mol_id = 1 # Let's assign the cavity as mol_id = 1
+    for index, pos in enumerate(cavity_positions):
+        atom_id = index + 1
+        atom_type = aa_dict[cavity_types[index]]["id"] + 20 # Add 20 for cavity monomers
+        atom_charge = aa_dict[cavity_types[index]]["charge"]
+        # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
+        # We need to recenter it to the center of the new simulation box
+        xcoord = pos[0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.)
+        ycoord = pos[1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.)
+        zcoord = pos[2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.)
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+    
+    # Second, assign protein positions
+    # We need to add proteins on both sides of the cavity.
+    # ****************   1. Right side    ************************
+    wrapped_zcoords = []
+    Lz = simBox[2][1] - simBox[2][0]
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+        zw = zcoord - (zcoord//Lz)*Lz
+        wrapped_zcoords.append(zw)
+    wrapped_zcoords = np.array(wrapped_zcoords)
+
+    # There is a chance that the wrapped coordinates of the protein chains cross the PB 
+    # along z direction. For the next logic to work we need them not to cross the PB
+    tmp = 0.
+    while (np.min(wrapped_zcoord) < simBox[2][0]+0.1*Lz or np.max(wrapped_zcoord) > simBox[2][1]-0.1*Lz):
+        tmp += 50.
+        wrapped_zcoord -= 50.0
+        wrapped_zcoord -= (wrapped_zcoord//Lz)*Lz
+    
+    # Calculate the shift to place the protein condensate on the right side of cavity
+    zw_min = np.min(wrapped_zcoords)
+    zc_max = np.max(cavity_positions[:,2]) + Lz/2. # Since cavity is originally centered at origin
+    z_buff = 1.0
+    delta_z = zc_max + z_buff - zw_min - tmp # We add this quantity to unwrapped zcoord
+
+    # Since Cavity is already placed we need to adjust atom_id and mol_id accordingly
+    num_cavity_atoms = cavity_positions.shape[0]
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, mol_id+1, atom_type, 
+                                                       atom_charge, xcoord, ycoord, zcoord+delta_z))
+
+    # ****************   2. Left side    ************************
+    # Calculate the shift to place the protein condensate on the left side of cavity
+    zw_max = np.max(wrapped_zcoords)
+    zc_min = np.min(cavity_positions[:,2]) - Lz/2. # Cavity originally centered at origin
+    z_buff = 1.0
+    delta_z = zc_min - z_buff - zw_max - tmp
+
+    # Since Cavity and proteins(right side) are already placed we need to adjust atom_id and mol_id accordingly
+    num_atoms_already_placed = cavity_positions.shape[0] + len(protein_coords)
+    last_mol_id = 1 + protein_coords[-1][1]
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_atoms_already_placed, mol_id+last_mol_id, atom_type, 
+                                                       atom_charge, xcoord, ycoord, zcoord+delta_z))
+
+
+    # BOND DATA
+    # Again, we have two sets of bond data (right side and left side)
+    configFile.write('\nBonds\n\n')
+    #  ***************   1. Right side    *********************
+    # We need to account for the atom ids
+    # Note: Cavity does not have any bonds
+    for bond_id, bond_type, first_atom_id, second_atom_id in protein_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id, bond_type,
+                                           first_atom_id+num_cavity_atoms,second_atom_id+num_cavity_atoms))
+    #  ***************   2. Left side    *********************
+    # We need to account for the atom ids and bond ids
+    last_bond_id = protein_bond_data[-1][0]
+    for bond_id, bond_type, first_atom_id, second_atom_id in protein_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id+last_bond_id, bond_type,
+                                           first_atom_id+num_atoms_already_placed,second_atom_id+num_atoms_already_placed))
+        
+    # Close file
+    configFile.close()
 
 
 
@@ -1035,3 +1221,6 @@ if __name__ == "__main__":
 
     # write_cavity_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
     #                     positions, types)
+
+    cavity_positions, cavity_types = generate_cuboid_cavity(seq="FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF", xw=200., yw=200., zw=100.)
+    
