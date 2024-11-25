@@ -308,7 +308,7 @@ def compute_averaged_density_profile_2(density_prof):
     # Find the center of mass of the density profile
     bins = avg_density_prof[:,0]
     bin_density_mass = avg_density_prof[:,1]
-    bin_density_number = avg_density_prof[:,1]
+    bin_density_number = avg_density_prof[:,2]
     cm = np.sum(bins * bin_density_mass) / np.sum(bin_density_mass)
     # Adjust the bin positions such that the COM is at the center of the box (i.e. 0.5)
     bins -= cm - 0.5
