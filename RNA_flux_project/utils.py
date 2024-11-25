@@ -227,11 +227,10 @@ def parse_density_profile_file_2(filename):
 
     Output:
     - timesteps (numpy array): Timesteps at which the density profile was measured and saved
-    - densities1, densities2 (numpy array): Density profiles at every timestep
+    - densities (numpy array): Density profiles at every timestep
     """    
     with open(filename, 'r') as data:
-        densities1 = []
-        densities2 = []
+        densities = []
         chunk_data = []
         timesteps = []
         for line in data:
