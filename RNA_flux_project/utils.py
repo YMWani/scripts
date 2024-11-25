@@ -1084,7 +1084,7 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
     # Calculate the shift to place the protein condensate on the right side of cavity
     zw_min = np.min(wrapped_zcoords)
     zc_max = np.max(cavity_positions[:,2]) + Lz/2. # Since cavity is originally centered at origin
-    z_buff = 5.0
+    z_buff = 2.5
     delta_z = zc_max + z_buff - zw_min - tmp # We add this quantity to unwrapped zcoord
 
     # Since Cavity is already placed we need to adjust atom_id and mol_id accordingly
@@ -1229,7 +1229,7 @@ def write_config_cuboid_cavity_with_inner_and_outer_prot(simBox,
     # Calculate the shift to place the protein condensate on the left side of cavity
     zw_max = np.max(wrapped_zcoords) # maxima of the outer proteins (wrapped)
     zc_min = np.min(cavity_and_inner_protein_positions[:,2]) # minima of inner proteins
-    z_buff = 5.0 # buffer separation between the two
+    z_buff = 2.5 # buffer separation between the two
     delta_z = zc_min - z_buff - zw_max - tmp
 
     # Since Cavity and proteins(right side) are already placed we need to adjust atom_id and mol_id accordingly
@@ -1266,6 +1266,19 @@ def write_config_cuboid_cavity_with_inner_and_outer_prot(simBox,
     # Close file
     configFile.close()
 
+def add_chains_to_cuboidal_cavity(seq, system_coords, system_bond_data, cavity_ends):
+    """
+    Function to add RNA/peptide chains inside a cavity contained inside a protein condensate
+
+    Arguments:
+    - seq (str): Peptide/RNA sequence that we want to put inside the cavity
+    - system_coords (tuple list): A list of tuples containing details for each atom of the 
+                                cavity and protein chains
+                                (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - system_bond_data (tuple list): Bond data for the protein chains
+                                    (bond_id, bond_type, first_atom_id, second_atom_id)
+    - cavity_ends (float list): edges of the cavity along z direction
+    """
 
 
 
@@ -1369,5 +1382,8 @@ if __name__ == "__main__":
     # write_cavity_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
     #                     positions, types)
 
-    cavity_positions, cavity_types = generate_cuboid_cavity(seq="FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF", xw=200., yw=200., zw=100.)
-    
+    composition = extract_sequence_composition("FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF")
+    print(composition)
+
+    composition = extract_sequence_composition("FAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAA")
+    print(composition)
