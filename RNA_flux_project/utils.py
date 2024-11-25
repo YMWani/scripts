@@ -251,7 +251,7 @@ def parse_density_profile_file_2(filename):
                 
             else:
                 # Line with 5 components: (bin, Coord1, Ncount, density/mass, density/number)
-                chunk_data.append([float(parts[1]), float(parts[3], float(parts[4]))])
+                chunk_data.append([float(parts[1]), float(parts[3]), float(parts[4])])
         densities.append(chunk_data)
     timesteps = np.array(timesteps)
     densities = np.array(densities)
