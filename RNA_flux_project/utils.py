@@ -216,6 +216,48 @@ def parse_density_profile_file(filename):
     return timesteps, densities
 
 
+def parse_density_profile_file_2(filename):
+    """
+    This function reads the density profile file created from LAMMPS simulations using the 
+    "compute .. chunk/atom ..." command and extracts the timesteps and density profiles at
+    the different time points
+    
+    Parameters:
+    - filename (str): Name of the file containing the density profile
+
+    Output:
+    - timesteps (numpy array): Timesteps at which the density profile was measured and saved
+    - densities1, densities2 (numpy array): Density profiles at every timestep
+    """    
+    with open(filename, 'r') as data:
+        densities1 = []
+        densities2 = []
+        chunk_data = []
+        timesteps = []
+        for line in data:
+            line = line.strip() # Remove leading/trailing whitespace
+            parts = line.split() # Split the line to get the different components
+
+            if line.startswith('#'):
+                # Skip comment lines
+                continue
+            
+            elif (len(parts) == 3):
+                # Line with 3 components: (Timestep, Number-of-bins, Total-count)
+                timesteps.append(int(parts[0]))
+                if (bool(chunk_data)):
+                    densities.append(chunk_data)
+                    chunk_data = []
+                
+            else:
+                # Line with 5 components: (bin, Coord1, Ncount, density/mass, density/number)
+                chunk_data.append([float(parts[1]), float(parts[3], float(parts[4]))])
+        densities.append(chunk_data)
+    timesteps = np.array(timesteps)
+    densities = np.array(densities)
+    return timesteps, densities
+
+
 def compute_averaged_density_profile(density_prof):
     """
     This function takes the raw density profile extracted from the LAMMPS density profile file
@@ -243,6 +285,37 @@ def compute_averaged_density_profile(density_prof):
     bins[bins < 0] += 1.0
     
     return bins, bin_density
+
+
+def compute_averaged_density_profile_2(density_prof):
+    """
+    This function takes the raw density profile extracted from the LAMMPS density profile file
+    and averages it over all the frames. In addition, the density profile is also recentered 
+    such that COM of condensate lies at 0.5 (reduced units)
+
+    Parameters:
+    - density_prof (numpy array): raw density profile obtained from LAMMPS simulations.
+                                  Expected shape (nframes, nbins, 2)
+                                  The final 2 columns are just the bin_centers and bin_density
+
+    Output:
+    - bins: bin centers
+    - bin_density (mass): bin densities
+    - bin_density (number): bin densities
+    """
+    avg_density_prof = np.mean(density_prof, axis=0) # Assuming no noise in the data, so we don't discard any part of it
+    
+    # Shift the density profile such that it is centered.
+    # Find the center of mass of the density profile
+    bins = avg_density_prof[:,0]
+    bin_density_mass = avg_density_prof[:,1]
+    bin_density_number = avg_density_prof[:,1]
+    cm = np.sum(bins * bin_density_mass) / np.sum(bin_density_mass)
+    # Adjust the bin positions such that the COM is at the center of the box (i.e. 0.5)
+    bins -= cm - 0.5
+    bins[bins < 0] += 1.0
+    
+    return bins, bin_density_mass, bin_density_number
 
 
 def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
