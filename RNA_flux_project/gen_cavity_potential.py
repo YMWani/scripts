@@ -8,10 +8,8 @@ as AA in MPIPI model. We intend to do this since we don't want the RNA molecules
 with the cavity monomers.
 
 Construction:
-Atom types - 44 (20 AA, 20 cavity AA, 4 RNA bases)
+Atom types - 60 (20 AA for proteins, 20 cavity AA, 20 AA for peptides inside cavity)
 """
-
-# NOTE: Current script only for AA and cavity monomers. Does not include RNA.
 
 # Open native MPIPI potentials file
 potentials_file = open("potentials.dat", "r")
@@ -55,7 +53,7 @@ for line in potentials_file:
 
 
 # Write new potential file that accounts for the cavity
-outfile = open("potential_cavity_and_proteins.dat", 'w')
+outfile = open("potential_cavity_proteins_peptides.dat", 'w')
 
 # AA for protein chains
 for type, charge in charges:
@@ -63,9 +61,13 @@ for type, charge in charges:
 # AA for cavity monomers
 for type, charge in charges:
     outfile.write(f"set type {int(type)+20} charge {charge}\n")
+# AA for peptides inside cavity
+for type, charge in charges:
+    outfile.write(f"set type {int(type)+40} charge {charge}\n")
 
 # Bond coeff
 outfile.write("\n")
+# Bond type does not change
 outfile.write(f"bond_coeff {bonds[0][0]} {bonds[0][1]} {bonds[0][2]}\n")
 
 # Pair styles
@@ -74,29 +76,44 @@ outfile.write(f"{pair_style[0]} {pair_style[1]} {pair_style[2]} {pair_style[3]} 
 
 # WF pair coeff. (Here we need to carefully account for the cavity monomers)
 outfile.write("\n")
-for idx1 in range(40):
-    for idx2 in range(idx1, 40):
+for idx1 in range(60):
+    for idx2 in range(idx1, 60):
         i = idx1%20
         j = idx2%20
         values = wf[i,j]
         if not np.any(np.isnan(values)):
             # print(f"{idx1+1} {idx2+1}       {i+1} {j+1}        ", values)
-            outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+            if idx1 >= 20 and idx1 <= 39 and idx2 >= 40: # To ensure that peptides inside cavity don't "see" the cavity
+                # print(idx1, idx2)
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])}\n")
+            else:
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
         else:
             values = wf[j,i]
             # print(f"{idx1+1} {idx2+1}       {i+1} {j+1}        ", values)
-            outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+            if idx1 >= 20 and idx1 <= 39 and idx2 >= 40: # To ensure that peptides inside cavity don't "see" the cavity
+                # print(idx1, idx2)
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])}\n")
+            else:
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+
 
 # coul/debye coeff.
 outfile.write("\n")
 # Atom types that have charges
 charged_types = np.unique(np.array([int(x[0]) for x in coul]))
-charged_types_additional = charged_types+20
-charged_types = np.concatenate((charged_types, charged_types_additional))
+charged_types_cavity = charged_types + 20
+charged_types_peptides = charged_types + 40
+charged_types = np.concatenate((charged_types, charged_types_cavity, charged_types_peptides))
+
+print(charged_types)
 
 for idx1 in range(charged_types.shape[0]):
     for idx2 in range(idx1, charged_types.shape[0]):
         # print(f"{charged_types[idx1]} {charged_types[idx2]}")
-        outfile.write(f"pair_coeff {charged_types[idx1]} {charged_types[idx2]} coul/debye 35.\n")    
+        if charged_types[idx1] >= 20 and charged_types[idx1] <= 39 and charged_types[idx2] >= 40:
+            continue
+        else:
+            outfile.write(f"pair_coeff {charged_types[idx1]} {charged_types[idx2]} coul/debye 35.\n")    
 
 outfile.close()

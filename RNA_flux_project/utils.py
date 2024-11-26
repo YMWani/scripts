@@ -1338,7 +1338,7 @@ def write_config_cuboid_cavity_with_inner_and_outer_prot(simBox,
     # Close file
     configFile.close()
 
-def add_chains_to_cuboidal_cavity(seq, system_coords, system_bond_data, cavity_ends):
+def add_chains_to_cuboidal_cavity(system_coords, system_bond_data, cavity_ends):
     """
     Function to add RNA/peptide chains inside a cavity contained inside a protein condensate
 
