@@ -1406,7 +1406,7 @@ def add_chains_to_cuboidal_cavity(simBox, system_coords, system_bond_data,
     delta_z = simBox_centre - cavity_centre_wrapped # Needs to be added to the particle positions
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in system_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord+delta_z))
-    
+
     # Second, assign positions of the peptides inside the cavity
     # Compute the width of the slab of peptides that go inside the cavity 
     # (ensuring smaller than the cavity width)
@@ -1424,6 +1424,7 @@ def add_chains_to_cuboidal_cavity(simBox, system_coords, system_bond_data,
         wrapped_zcoords -= (wrapped_zcoords//Lz)*Lz
     
     width = np.max(wrapped_zcoords) - np.min(wrapped_zcoords)
+    print(width)
     cav_maxz = simBox_centre + cavity_width/2.
     cav_minz = simBox_centre - cavity_width/2.
     if (width > cavity_width - 2.):
