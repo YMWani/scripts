@@ -53,7 +53,7 @@ for line in potentials_file:
 
 
 # Write new potential file that accounts for the cavity
-outfile = open("potential_cavity_proteins_peptides.dat", 'w')
+outfile = open("potential_60_particle_types.dat", 'w')
 
 # AA for protein chains
 for type, charge in charges:
