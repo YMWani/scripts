@@ -1571,7 +1571,7 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
 
 
 def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_bond_data,
-                                  cavity_centre_wrapped, cavity_dimensions, seq, nchains
+                                  cavity_centre_wrapped, cavity_dimensions, seq, nchains,
                                   num_atom_types = 60):
     """
     Function to add RNA/peptide chains inside a cavity contained inside a protein condensate
