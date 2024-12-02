@@ -1528,7 +1528,7 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     lattice_points = np.array(lattice_points) # lattice points for chains
 
     # Randomly choose nchains lattice points from the ones generated to place the chains
-    random_indices = np.random.choice(np.arange(0, lattice_points.shape[0]), nchains)
+    random_indices = np.random.choice(np.arange(0, len(lattice_points)), nchains)
     chosen_lattice_points = lattice_points[random_indices]
 
     position_data = []
@@ -1765,4 +1765,9 @@ if __name__ == "__main__":
 
     # write_cavity_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
     #                     positions, types)
+
+    cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
+                                                        "DDDDDDDDDD", 
+                                                        [[0.0, 200.0], [0., 200.], [-50., 50.]], 
+                                                        500)
 
