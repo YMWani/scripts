@@ -1649,11 +1649,12 @@ def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_b
     num_system_atoms = len(system_coords)
     highest_mol_id = max([t[1] for t in system_coords]) # molid is at index 1
     # We need to adjust atom_type as well since peptides are generated using atom_types [1,20]
+    # In addition we need to adjust positions of peptides to be inside the cavity
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_system_atoms, 
                                                        mol_id+highest_mol_id,
                                                        atom_type+40, 
-                                                       atom_charge, xcoord, ycoord, zcoord))
+                                                       atom_charge, xcoord, ycoord, zcoord+Lz/2.))
 
     # BOND DATA
     configFile.write('\nBonds\n\n')
