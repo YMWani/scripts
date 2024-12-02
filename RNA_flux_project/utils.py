@@ -1475,7 +1475,7 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     - bond_data (list of tuples): (bond_id, bond_type, atom_id_1, atom_id_2)
     """
     r0 = 3.81 # equilibrium bond length (Angstroms)
-    seq_length = len(seq)*r0 + 1.0 # Approximate excluded length of chain with buffer
+    seq_length = len(seq)*r0 + 10.0 # Approximate excluded length of chain with buffer
     Lx = box_bounds[0][1] - box_bounds[0][0]
     nx = int(Lx//seq_length)
     Ly = box_bounds[1][1] - box_bounds[1][0]
