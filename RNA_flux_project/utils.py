@@ -8,7 +8,8 @@ import pathlib
 import random
 from generate_sphere import sphere
 current_dir = pathlib.Path(__file__).resolve().parent
-plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
+import random
+# plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
 
 
 def check_sequence_validity(sequence):
@@ -1460,7 +1461,216 @@ def add_chains_to_cuboidal_cavity(simBox, system_coords, system_bond_data,
     
     configFile.close()
 
+def place_chains_in_confinement(seq, box_bounds, nchains):
+    """
+    Function to place protein chains in straight lines inside a box.
 
+    Arguments:
+    - seq (str): Protein sequence that we want to place inside box
+    - box_bounds (list): Box dimensions that contains the protein chains
+    - nchains (int): Number of chains to place inside the box
+
+    Returns:
+    - position_data (list of tuples): (atom_id, mol_id, atom_type, atom_charge, x, y, z)
+    - bond_data (list of tuples): (bond_id, bond_type, atom_id_1, atom_id_2)
+    """
+    r0 = 3.81 # equilibrium bond length (Angstroms)
+    seq_length = len(seq)*r0 + 1.0 # Approximate excluded length of chain with buffer
+    Lx = box_bounds[0][1] - box_bounds[0][0]
+    nx = int(Lx//seq_length)
+    Ly = box_bounds[1][1] - box_bounds[1][0]
+    ny = int(Ly//seq_length)
+    Lz = box_bounds[2][1] - box_bounds[2][0]
+    nz = int(Lz//seq_length)
+    buffer = 10.0 # buffer distance between chains
+    box_origin = [box_bounds[0][0], box_bounds[1][0], box_bounds[2][0]]
+    # Extend chains along x direction if the x dimension is largest
+    lattice_points = []
+    if nx >= ny and nx >= nz:
+        direction = "x"
+        ny = int(Ly//buffer)
+        nz = int(Lz//buffer)
+        for j in range(ny):
+            for k in range(nz):
+                for i in range(nx):
+                    x_pos = i*seq_length
+                    y_pos = j*buffer
+                    z_pos = k*buffer
+                    if (0. <= x_pos <= Lx-seq_length) and (0. <= y_pos <= Ly-buffer) and (0. <= z_pos <= Lz-buffer):
+                        lattice_points.append([box_origin[0]+x_pos, box_origin[1]+y_pos, box_origin[2]+z_pos])
+    # Extend chains along y direction if the y dimension is largest
+    elif ny >= nx and ny >= nz:
+        direction = "y"
+        nx = int(Lx//buffer)
+        nz = int(Lz//buffer)
+        for i in range(nx):
+            for k in range(nz):
+                for j in range(ny):
+                    x_pos = i*buffer
+                    y_pos = j*seq_length
+                    z_pos = k*buffer
+                    if (0. <= x_pos <= Lx-buffer) and (0. <= y_pos <= Ly-seq_length) and (0. <= z_pos <= Lz-buffer):
+                        lattice_points.append([box_origin[0]+x_pos, box_origin[1]+y_pos, box_origin[2]+z_pos])
+    # Extend chains along z direction if the z dimension is largest
+    elif nz >= nx and nz >= ny:
+        direction = "z"
+        nx = int(Lx//buffer)
+        ny = int(Ly//buffer)
+        for i in range(nx):
+            for j in range(ny):
+                for k in range(nz):
+                    x_pos = i*buffer
+                    y_pos = j*buffer
+                    z_pos = k*seq_length
+                    if (0. <= x_pos <= Lx-buffer) and (0. <= y_pos <= Ly-buffer) and (0. <= z_pos <= Lz-seq_length):
+                        lattice_points.append([box_origin[0]+x_pos, box_origin[1]+y_pos, box_origin[2]+z_pos])
+    
+    lattice_points = np.array(lattice_points) # lattice points for chains
+
+    # Randomly choose nchains lattice points from the ones generated to place the chains
+    random_indices = np.random.choice(np.arange(0, lattice_points.shape[0]), nchains)
+    chosen_lattice_points = lattice_points[random_indices]
+
+    position_data = []
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    atom_id_counter = 0
+    for idx, pos in enumerate(chosen_lattice_points):
+        mol_id = idx + 1 # mol id
+        xcoord = pos[0]
+        ycoord = pos[1]
+        zcoord = pos[2]
+        for aa in seq:
+            atom_id_counter += 1 # atom id
+            atom_type = aa_dict[f"{aa}"]["id"] # atom type
+            atom_charge = aa_dict[f"{aa}"]["charge"] # atom charge
+            if direction == "x":
+                position_data.append((atom_id_counter, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+                xcoord += r0
+            elif direction == "y":
+                position_data.append((atom_id_counter, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+                ycoord += r0
+            elif direction == "z":
+                position_data.append((atom_id_counter, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+                zcoord += r0
+    
+    bond_data = []
+    bond_id_counter = 0
+    bond_type = 1
+    for i in range(nchains):
+        start_atom_id = i*len(seq)
+        for j in range(1,len(seq)):
+            bond_id_counter += 1
+            first_atom_id = start_atom_id + j
+            second_atom_id = first_atom_id + 1
+            bond_data.append((bond_id_counter, bond_type, first_atom_id, second_atom_id))
+
+    return position_data, bond_data
+
+
+def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_bond_data,
+                                  cavity_centre_wrapped, cavity_dimensions, seq, nchains
+                                  num_atom_types = 60):
+    """
+    Function to add RNA/peptide chains inside a cavity contained inside a protein condensate
+
+    Arguments:
+    - simBox (list): Simulation box coordinates
+    - system_coords (tuple list): A list of tuples containing details for each atom of the 
+                                cavity and protein chains
+                                (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - system_bond_data (tuple list): Bond data for the protein chains
+                                    (bond_id, bond_type, first_atom_id, second_atom_id)
+    - cavity_centre_wrapped (float): Centre of the cavity along z direction
+    - cavity_dimensions (list): cavity coordinates
+    - seq (str): Sequence of peptides that go inside the box
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    # Based on cavity coordinates, first determine the position and bond data of the peptides
+    # that go inside the cavity
+    cavity_box = [[cavity_dimensions[0][0] + 10., cavity_dimensions[0][1] - 10.],
+                  [cavity_dimensions[1][0] + 10., cavity_dimensions[1][1] - 10.],
+                  [cavity_dimensions[2][0] + 10., cavity_dimensions[2][1] - 10.]]
+    cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
+                                                        seq, cavity_box, nchains)
+
+    # Start writing config file 
+    configFile = open('config_with_peptides_inside_cavity.dat','w')
+    configFile.write('LAMMPS data file with cuboidal cavity and chains inside cavity\n\n')
+    
+    # Overall data
+    # Note: system_coords contains data for the cavity, inner proteins and outer proteins
+    num_atoms = len(system_coords) + len(cavity_peptides_coords)
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n') # 60 atom types
+
+    # Note: system_bond_data contains bond info. for inner and outer proteins    
+    num_bonds = len(system_bond_data) + len(cavity_peptides_bond_data)
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n') # Bond types remain unchanged
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+    # Third, assign ids and masses for Amino acids for chains inside cavity 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+40} {value.get('mass')}\n")
+
+    # Particle POSITIONS
+    configFile.write('\nAtoms\n\n')
+
+    # First assign positions of the cavity and condensate proteins (already equilibrated)
+    # We want to recenter the cavity and condensate proteins such that it is centered at
+    # the center of the simulation box
+    # (Here assuming that only box simension in the z direction is changed.)
+    Lz = simBox[2][1]-simBox[2][0]
+    simBox_centre = simBox[2][0] + Lz/2.
+    delta_z = simBox_centre - cavity_centre_wrapped # Needs to be added to the particle positions
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in system_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord+delta_z))
+
+    # Second, assign positions of the peptides inside the cavity
+    # Since the system coordinates are already fixed, we need to adjust the atom_id and mol_id accordingly
+    num_system_atoms = len(system_coords)
+    highest_mol_id = max([t[1] for t in system_coords]) # molid is at index 1
+    # We need to adjust atom_type as well since peptides are generated using atom_types [1,20]
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_system_atoms, 
+                                                       mol_id+highest_mol_id,
+                                                       atom_type+40, 
+                                                       atom_charge, xcoord, ycoord, zcoord))
+
+    # BOND DATA
+    configFile.write('\nBonds\n\n')
+    # System data contains bond data for inner and outer proteins
+    for bond_id, bond_type, first_atom_id, second_atom_id in system_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+    
+    # Peptides inside cavity
+    # We need to account for the bond_ids and atom_ids
+    highest_system_bond_id = max([t[0] for t in system_bond_data]) # Data can be jumbled up
+    for bond_id, bond_type, first_atom_id, second_atom_id in cavity_peptides_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id+highest_system_bond_id,
+                                           bond_type,
+                                           first_atom_id+num_system_atoms,
+                                           second_atom_id+num_system_atoms))
+    
+    configFile.close()
 
 
 
@@ -1556,8 +1766,3 @@ if __name__ == "__main__":
     # write_cavity_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
     #                     positions, types)
 
-    composition = extract_sequence_composition("FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF")
-    print(composition)
-
-    composition = extract_sequence_composition("FAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAAFAFAA")
-    print(composition)
