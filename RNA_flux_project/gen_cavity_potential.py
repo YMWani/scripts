@@ -42,8 +42,6 @@ for line in potentials_file:
         wf[int(parts[1]) - 1, int(parts[2]) - 1, 3] = int(parts[7])
         wf[int(parts[1]) - 1, int(parts[2]) - 1, 4] = float(parts[8])
 
-        
-        
     elif "pair_coeff" and "coul/debye" in line:
         parts = line.strip().split()
         coul.append((parts[1], parts[2], parts[4]))
@@ -76,26 +74,24 @@ outfile.write(f"{pair_style[0]} {pair_style[1]} {pair_style[2]} {pair_style[3]} 
 
 # WF pair coeff. (Here we need to carefully account for the cavity monomers)
 outfile.write("\n")
+
 for idx1 in range(60):
     for idx2 in range(idx1, 60):
         i = idx1%20
         j = idx2%20
+        # print(idx1,i, "    ", idx2, j)
         values = wf[i,j]
-        if not np.any(np.isnan(values)):
-            # print(f"{idx1+1} {idx2+1}       {i+1} {j+1}        ", values)
+        if not np.any(np.isnan(values)): # Since wf is an upper traingular matrix
             if idx1 >= 20 and idx1 <= 39 and idx2 >= 40: # To ensure that peptides inside cavity don't "see" the cavity
-                # print(idx1, idx2)
-                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])}\n")
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
             else:
-                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
         else:
             values = wf[j,i]
-            # print(f"{idx1+1} {idx2+1}       {i+1} {j+1}        ", values)
             if idx1 >= 20 and idx1 <= 39 and idx2 >= 40: # To ensure that peptides inside cavity don't "see" the cavity
-                # print(idx1, idx2)
-                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])}\n")
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
             else:
-                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])}\n")
+                outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
 
 
 # coul/debye coeff.
@@ -106,7 +102,7 @@ charged_types_cavity = charged_types + 20
 charged_types_peptides = charged_types + 40
 charged_types = np.concatenate((charged_types, charged_types_cavity, charged_types_peptides))
 
-print(charged_types)
+# print(charged_types)
 
 for idx1 in range(charged_types.shape[0]):
     for idx2 in range(idx1, charged_types.shape[0]):
