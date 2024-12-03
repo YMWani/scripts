@@ -1691,7 +1691,7 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
     # Generate position and bond data for the peptides that go inside the cavity
     cavity_box = [[simBox[0][0] + 10., simBox[0][1] - 10.],
                   [simBox[1][0] + 10., simBox[1][1] - 10.],
-                  [-z_length/2. + 10., z_length/2. + 10.]]
+                  [-z_length/2. + 10., z_length/2. - 10.]]
     cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
                                                         peptideSeq, cavity_box, nchains)
     
@@ -1881,6 +1881,24 @@ if __name__ == "__main__":
     #                                                     "DDDDDDDDDD", 
     #                                                     [[0.0, 200.0], [0., 200.], [-50., 50.]], 
     #                                                     500)
+
+    # xvals = [x[4] for x in cavity_peptides_coords]
+    # yvals = [x[5] for x in cavity_peptides_coords]
+    # zvals = [x[6] for x in cavity_peptides_coords]
+    
+    # import matplotlib.pyplot as plt
+    # from mpl_toolkits.mplot3d import Axes3D
+
+    # fig = plt.figure(figsize=(10, 8))
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(xvals, yvals, zvals)
+
+    # ax.set_xlabel('X Axis')
+    # ax.set_ylabel('Y Axis')
+    # ax.set_zlabel('Z Axis')
+
+    # plt.show()
+
 
     # write_config_cuboidal_cavity_w_peptides_wo_outer_proteins([[0.0, 200.0], [0., 200.], [0., 1000.]],
     #                                                           "FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF",
