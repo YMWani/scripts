@@ -1018,6 +1018,8 @@ def generate_cuboid_cavity(seq, xw, yw, zw):
     Construct a cuboidal shaped cavity where the surfaces along the xy plane are decorated with surface
     monomers that have a similar composition as the given protein sequence. 
     
+    Cavity is centered at origin
+
     Arguments:
     - seq (str): Protein sequence whose composition we want to replicate on the cavity
     - xw, yw, zw (float): Width of the cavity in x, y, and z direction, respectively.
@@ -1673,7 +1675,115 @@ def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_b
     
     configFile.close()
 
+def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq, 
+                                                              peptideSeq, nchains, 
+                                                              num_atom_types = 60):
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    x_length = simBox[0][1] - simBox[0][0] # same as simulation box
+    y_length = simBox[1][1] - simBox[1][0] # same as simulation box
+    z_length = 100 # 10 nm width of the cavity
+    # Generate cavity positions and types
+    cavity_positions, cavity_types = generate_cuboid_cavity(cavity_seq, x_length, y_length, z_length)
 
+    # Generate position and bond data for the peptides that go inside the cavity
+    cavity_box = [[simBox[0][0] + 10., simBox[0][1] - 10.],
+                  [simBox[1][0] + 10., simBox[1][1] - 10.],
+                  [-z_length/2. + 10., z_length/2. + 10.]]
+    cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
+                                                        peptideSeq, cavity_box, nchains)
+    
+    # import matplotlib.pyplot as plt
+    # from mpl_toolkits.mplot3d import Axes3D
+
+    # fig = plt.figure(figsize=(10, 8))
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(cavity_positions[:,0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.), 
+    #            cavity_positions[:,1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.), 
+    #            cavity_positions[:,2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.))
+    # xvals = []
+    # yvals = []
+    # zvals = []
+    # for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
+    #     xvals.append(xcoord)
+    #     yvals.append(ycoord)
+    #     zvals.append(zcoord + (simBox[2][1]-simBox[2][0])/2.)
+    # ax.scatter(xvals, yvals, zvals)
+
+    # ax.set_xlabel('X Axis')
+    # ax.set_ylabel('Y Axis')
+    # ax.set_zlabel('Z Axis')
+
+    # plt.show()
+
+    # Start writing config file 
+    configFile = open('config_cavity_and_peptides_only.dat','w')
+    configFile.write('LAMMPS data file with cuboidal cavity and chains inside cavity\n\n')
+    
+    # Overall data
+    num_atoms = len(cavity_positions) + len(cavity_peptides_coords)
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n') # 60 atom types
+
+    num_bonds = len(cavity_peptides_bond_data)
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n') # Bond types remain unchanged
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+    # Third, assign ids and masses for Amino acids for chains inside cavity 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+40} {value.get('mass')}\n")
+
+    # Particle POSITIONS
+    configFile.write('\nAtoms\n\n')
+
+    # First assign cavity
+    mol_id = 1
+    for index, pos in enumerate(cavity_positions):
+        atom_id = index + 1
+        atom_type = aa_dict[cavity_types[index]]["id"] + 20 # Add 20 for cavity monomers
+        atom_charge = aa_dict[cavity_types[index]]["charge"]
+        # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
+        # We need to recenter it to the center of the new simulation box
+        xcoord = pos[0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.)
+        ycoord = pos[1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.)
+        zcoord = pos[2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.)
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+    
+    # Second, assign peptides's position
+    num_cavity_atoms = len(cavity_positions)
+    highest_mol_id = 1
+    Lz = simBox[2][1]-simBox[2][0]
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, 
+                                                       mol_id+highest_mol_id,
+                                                       atom_type+40, 
+                                                       atom_charge, xcoord, ycoord, zcoord+Lz/2.))
+    
+    # BOND DATA
+    configFile.write('\nBonds\n\n')
+
+    for bond_id, bond_type, first_atom_id, second_atom_id in cavity_peptides_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id,
+                                           bond_type,
+                                           first_atom_id+num_cavity_atoms,
+                                           second_atom_id+num_cavity_atoms))
+    
+    configFile.close()
 
 
 if __name__ == "__main__":
@@ -1767,8 +1877,13 @@ if __name__ == "__main__":
     # write_cavity_config([[0.0, 200.0], [0., 200.], [0., 1000.]],
     #                     positions, types)
 
-    cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
-                                                        "DDDDDDDDDD", 
-                                                        [[0.0, 200.0], [0., 200.], [-50., 50.]], 
-                                                        500)
+    # cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
+    #                                                     "DDDDDDDDDD", 
+    #                                                     [[0.0, 200.0], [0., 200.], [-50., 50.]], 
+    #                                                     500)
+
+    # write_config_cuboidal_cavity_w_peptides_wo_outer_proteins([[0.0, 200.0], [0., 200.], [0., 1000.]],
+    #                                                           "FYHWFVNFFFAVWFWNYRFCNRHWPWVQENFMFFWAKITGYFNEFFFDFF",
+    #                                                           "AAAAAAAAAA",
+    #                                                           50)
 
