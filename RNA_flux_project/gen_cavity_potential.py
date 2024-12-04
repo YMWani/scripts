@@ -34,7 +34,7 @@ for line in potentials_file:
         parts = line.strip().split()
         pair_style = parts
     
-    elif "pair_coeff" and "wf/cut" in line:
+    elif "pair_coeff" in line and "wf/cut" in line:
         parts = line.strip().split()
         wf[int(parts[1]) - 1, int(parts[2]) - 1, 0] = float(parts[4])
         wf[int(parts[1]) - 1, int(parts[2]) - 1, 1] = float(parts[5])
@@ -42,7 +42,7 @@ for line in potentials_file:
         wf[int(parts[1]) - 1, int(parts[2]) - 1, 3] = int(parts[7])
         wf[int(parts[1]) - 1, int(parts[2]) - 1, 4] = float(parts[8])
 
-    elif "pair_coeff" and "coul/debye" in line:
+    elif "pair_coeff" in line and "coul/debye" in line:
         parts = line.strip().split()
         coul.append((parts[1], parts[2], parts[4]))
 
@@ -82,13 +82,13 @@ for idx1 in range(60):
         # print(idx1,i, "    ", idx2, j)
         values = wf[i,j]
         if not np.any(np.isnan(values)): # Since wf is an upper traingular matrix
-            if idx1 >= 20 and idx1 <= 39 and idx2 >= 40: # To ensure that peptides inside cavity don't "see" the cavity
+            if idx1 >= 20 and idx1 <= 39 and idx2 >= 20: # To ensure that peptides inside cavity don't "see" the cavity
                 outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
             else:
                 outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
         else:
             values = wf[j,i]
-            if idx1 >= 20 and idx1 <= 39 and idx2 >= 40: # To ensure that peptides inside cavity don't "see" the cavity
+            if idx1 >= 20 and idx1 <= 39 and idx2 >= 20: # To ensure that peptides inside cavity don't "see" the cavity
                 outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {0.0} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
             else:
                 outfile.write(f"pair_coeff {idx1+1} {idx2+1} wf/cut {values[0]} {values[1]} {int(values[2])} {int(values[3])} {values[4]}\n")
@@ -107,7 +107,7 @@ charged_types = np.concatenate((charged_types, charged_types_cavity, charged_typ
 for idx1 in range(charged_types.shape[0]):
     for idx2 in range(idx1, charged_types.shape[0]):
         # print(f"{charged_types[idx1]} {charged_types[idx2]}")
-        if charged_types[idx1] >= 20 and charged_types[idx1] <= 39 and charged_types[idx2] >= 40:
+        if charged_types[idx1] >= 20 and charged_types[idx1] <= 39 and charged_types[idx2] >= 20:
             continue
         else:
             outfile.write(f"pair_coeff {charged_types[idx1]} {charged_types[idx2]} coul/debye 35.\n")    

@@ -8,8 +8,9 @@ import pathlib
 import random
 from generate_sphere import sphere
 current_dir = pathlib.Path(__file__).resolve().parent
+plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
 import random
-# plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
+import pandas as pd
 
 
 def check_sequence_validity(sequence):
@@ -1785,6 +1786,21 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
     
     configFile.close()
 
+def create_interaction_matrix(filename):
+    infile = open(filename, "r")
+    matrix_data = np.full((60,60,2), np.nan)
+
+    for line in infile:
+        if "pair_coeff" in line and "wf/cut" in line:
+            parts = line.strip().split()
+            matrix_data[int(parts[1]) - 1, int(parts[2]) - 1, 0] = float(parts[4])
+            matrix_data[int(parts[1]) - 1, int(parts[2]) - 1, 1] = float(parts[5])
+    
+    table = matrix_data[:,:,0]
+    df = pd.DataFrame(table)
+    
+    df.to_csv("interaction_matrix.csv", index=False, header=False)
+
 
 if __name__ == "__main__":
     print("Executing function calls from within the script")
@@ -1905,3 +1921,4 @@ if __name__ == "__main__":
     #                                                           "AAAAAAAAAA",
     #                                                           50)
 
+    # create_interaction_matrix("potential_60_particle_types.dat")
