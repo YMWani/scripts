@@ -1749,7 +1749,7 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, 
                                                        mol_id+highest_mol_id,
-                                                       atom_type+40, 
+                                                       atom_type, 
                                                        atom_charge, xcoord, ycoord, zcoord+Lz/2.))
     
     # BOND DATA
