@@ -1695,29 +1695,6 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
                   [-z_length/2. + 10., z_length/2. - 10.]]
     cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
                                                         peptideSeq, cavity_box, nchains)
-    
-    # import matplotlib.pyplot as plt
-    # from mpl_toolkits.mplot3d import Axes3D
-
-    # fig = plt.figure(figsize=(10, 8))
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(cavity_positions[:,0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.), 
-    #            cavity_positions[:,1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.), 
-    #            cavity_positions[:,2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.))
-    # xvals = []
-    # yvals = []
-    # zvals = []
-    # for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
-    #     xvals.append(xcoord)
-    #     yvals.append(ycoord)
-    #     zvals.append(zcoord + (simBox[2][1]-simBox[2][0])/2.)
-    # ax.scatter(xvals, yvals, zvals)
-
-    # ax.set_xlabel('X Axis')
-    # ax.set_ylabel('Y Axis')
-    # ax.set_zlabel('Z Axis')
-
-    # plt.show()
 
     # Start writing config file 
     configFile = open('config_cavity_and_peptides_only.dat','w')
@@ -1772,7 +1749,7 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, 
                                                        mol_id+highest_mol_id,
-                                                       atom_type+40, 
+                                                       atom_type, 
                                                        atom_charge, xcoord, ycoord, zcoord+Lz/2.))
     
     # BOND DATA
