@@ -1730,21 +1730,23 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
     configFile.write('\nAtoms\n\n')
 
     # First assign cavity
-    mol_id = 1
-    for index, pos in enumerate(cavity_positions):
-        atom_id = index + 1
-        atom_type = aa_dict[cavity_types[index]]["id"] + 20 # Add 20 for cavity monomers
-        atom_charge = aa_dict[cavity_types[index]]["charge"]
-        # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
-        # We need to recenter it to the center of the new simulation box
-        xcoord = pos[0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.)
-        ycoord = pos[1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.)
-        zcoord = pos[2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.)
-        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+    # mol_id = 1
+    # for index, pos in enumerate(cavity_positions):
+    #     atom_id = index + 1
+    #     atom_type = aa_dict[cavity_types[index]]["id"] + 20 # Add 20 for cavity monomers
+    #     atom_charge = aa_dict[cavity_types[index]]["charge"]
+    #     # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
+    #     # We need to recenter it to the center of the new simulation box
+    #     xcoord = pos[0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.)
+    #     ycoord = pos[1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.)
+    #     zcoord = pos[2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.)
+    #     configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
     
     # Second, assign peptides's position
-    num_cavity_atoms = len(cavity_positions)
-    highest_mol_id = 1
+    # num_cavity_atoms = len(cavity_positions)
+    # highest_mol_id = 1
+    num_cavity_atoms = 0
+    highest_mol_id = 0
     Lz = simBox[2][1]-simBox[2][0]
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
         configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, 
