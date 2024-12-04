@@ -1701,7 +1701,8 @@ def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq
     configFile.write('LAMMPS data file with cuboidal cavity and chains inside cavity\n\n')
     
     # Overall data
-    num_atoms = len(cavity_positions) + len(cavity_peptides_coords)
+    # num_atoms = len(cavity_positions) + len(cavity_peptides_coords)
+    num_atoms = len(cavity_peptides_coords)
     configFile.write(f'{num_atoms} atoms\n')
     configFile.write(f'{num_atom_types} atom types\n') # 60 atom types
 
