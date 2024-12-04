@@ -1531,7 +1531,7 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     lattice_points = np.array(lattice_points) # lattice points for chains
 
     # Randomly choose nchains lattice points from the ones generated to place the chains
-    random_indices = np.random.choice(np.arange(0, len(lattice_points)), nchains)
+    random_indices = np.random.choice(np.arange(0, len(lattice_points)), nchains, replace=False)
     chosen_lattice_points = lattice_points[random_indices]
 
     position_data = []
