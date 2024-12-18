@@ -17,6 +17,7 @@ axes.labelpad : 4
 axes.formatter.limits: -3,4
 # ggplot colors
 axes.prop_cycle : cycler(color=['E24A33', '348ABD', '988ED5', '777777', 'FBC15E', '8EBA42', 'FFB5B8'])
+# axes.prop_cycle : cycler(color=['#E24A33', '#348ABD', '#988ED5', '#777777', '#FBC15E', '#8EBA42', '#FFB5B8'])
 
 ## TICKS
 xtick.top : True

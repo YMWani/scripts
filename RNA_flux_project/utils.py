@@ -1485,7 +1485,7 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     ny = int(Ly//seq_length)
     Lz = box_bounds[2][1] - box_bounds[2][0]
     nz = int(Lz//seq_length)
-    buffer = 10.0 # buffer distance between chains
+    buffer = 5.0 # buffer distance between chains
     box_origin = [box_bounds[0][0], box_bounds[1][0], box_bounds[2][0]]
     # Extend chains along x direction if the x dimension is largest
     lattice_points = []
