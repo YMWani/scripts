@@ -124,6 +124,28 @@ def compute_averaged_density_profile(density_prof):
     bins[bins <= 0] += 1.0
     return bins, bin_density, sem_density_prof
 
+def compute_averaged_density_profile_without_recentering(density_prof):
+    """
+    This function takes the raw density profile extracted from the LAMMPS density profile file
+    and averages it over all the frames.
+
+    Parameters:
+    - density_prof (numpy array): raw density profile obtained from LAMMPS simulations.
+                                  Expected shape (nframes, nbins, 2)
+                                  The final 2 columns are just the bin_centers and bin_density
+
+    Output:
+    - bins: bin centers
+    - bin_density: bin densities
+    """
+    avg_density_prof = np.mean(density_prof, axis=0) # Assuming no noise in the data, so we don't discard any part of it
+    sem_density_prof = sem(density_prof[:,:,1], axis=0)
+    
+    bins = avg_density_prof[:,0]
+    bin_density = avg_density_prof[:,1]
+    
+    return bins, bin_density, sem_density_prof
+
 
 def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
     """
