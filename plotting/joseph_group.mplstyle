@@ -1,0 +1,51 @@
+# custom_style.mplstyle
+
+## FONT
+font.family: sans-serif
+font.sans-serif: Computer Modern Sans Serif
+font.size: 7
+#text.usetex: True
+#mathtext.fontset : cm
+
+## AXES
+axes.linewidth : 1
+axes.labelsize : 7
+axes.labelpad : 3
+axes.formatter.limits: -3,4
+axes.grid: false
+axes.prop_cycle: cycler('color', ["#ae3832", "#3b6289", "#e77500", "#69853c", "#d9ac36", "#c97796", "#82867f", "#72b4c7", "#b396bc", "#761818", "#4d541d", "#bd4f2a", "#b4b990", "#9e6b5e", "#f37d59", "#ffc470", "#ca976c", "#5b7365", "#5D1C34", "#323232"])
+
+## TICKS
+xtick.top : True
+xtick.bottom : True
+xtick.labelsize : 7
+xtick.minor.visible : True
+xtick.direction : in
+xtick.major.pad: 3
+
+ytick.left : True
+ytick.right : True
+ytick.labelsize : 7
+ytick.minor.visible : True
+ytick.direction : in
+ytick.major.pad: 3
+
+## LEGEND
+legend.frameon : False
+legend.fontsize: 7
+legend.handletextpad : 0.2
+legend.handlelength : 1.8
+legend.columnspacing : 1
+legend.labelspacing : 0.3
+legend.borderpad : 0.2
+
+## FIGURE
+figure.figsize: 3.4, 2.55
+figure.dpi: 600
+
+## SAVING FIGURES
+savefig.bbox : tight
+savefig.pad_inches : 0.05
+
+figure.constrained_layout.use: True
+

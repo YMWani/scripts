@@ -467,6 +467,79 @@ def compute_SCD(seq):
     return SCD
 
 
+def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5000):
+    """
+    For a given sequence length N and a target normalized SCD value, this function
+    generates a unique E/K peptide sequence using the Monte Carlo method.
+
+    Parameters:
+    - N (int): Length of the sequence (must be even)
+    - target_nSCD (float): Target normalized SCD value
+    - tolerance (float): Tolerance level for the target normalized SCD value
+    - max_iterations (int): Maximum number of iterations to attempt
+
+    Returns:
+    - sequence (str): Generated E/K peptide sequence
+    - current_nscd (float): Final normalized SCD value
+    """
+    if N % 2 != 0:
+        raise ValueError("N must be an even number.")
+
+    half_N = N // 2
+
+    # Sequence with lowest SCD
+    seq_min = "EK" * half_N
+    scd_min = compute_SCD(seq=seq_min)
+
+    # Sequence with highest SCD
+    seq_max = "E" * half_N + "K" * half_N
+    scd_max = compute_SCD(seq=seq_max)
+
+    # Compute the range of SCD values
+    scd_range = scd_max - scd_min
+
+    # Normalize the SCD value
+    def normalize_SCD(scd):
+        return (scd - scd_min) / scd_range
+
+    # Start with the sequence with the highest SCD
+    sequence = list(seq_max)
+    current_scd = scd_max
+    current_nscd = normalize_SCD(current_scd)
+
+    iterations = 0
+    while not (target_nSCD - tolerance <= current_nscd <= target_nSCD + tolerance):
+        if iterations >= max_iterations:
+            return "Sequence could not be determined within the maximum number of iterations.", current_nscd
+
+        # Randomly select an E and a K to swap
+        e_indices = [i for i, x in enumerate(sequence) if x == 'E']
+        k_indices = [i for i, x in enumerate(sequence) if x == 'K']
+        if not e_indices or not k_indices:
+            break
+        e_index = random.choice(e_indices)
+        k_index = random.choice(k_indices)
+
+        # Swap E and K
+        sequence[e_index], sequence[k_index] = sequence[k_index], sequence[e_index]
+
+        # Compute the new SCD and normalized SCD
+        new_scd = compute_SCD(sequence)
+        new_nscd = normalize_SCD(new_scd)
+
+        # Accept the mutation if the nSCD is closer to the target
+        if abs(new_nscd - target_nSCD) < abs(current_nscd - target_nSCD):
+            current_scd = new_scd
+            current_nscd = new_nscd
+        else:
+            # Revert the swap
+            sequence[e_index], sequence[k_index] = sequence[k_index], sequence[e_index]
+
+        iterations += 1
+
+    return ''.join(sequence), current_nscd
+
+
 def extract_sequence_composition(seq):
     """
     Extract the AA coposition of a given sequence. The properties extracted are:
@@ -1899,3 +1972,6 @@ if __name__ == "__main__":
     #                                                           50)
 
     # create_interaction_matrix("potential_60_particle_types.dat")
+
+    # seq, final_nscd = gen_EK_sequence_Monte_carlo(N=10, target_nSCD=0.9, tolerance=0.05)
+    # print(seq, final_nscd)

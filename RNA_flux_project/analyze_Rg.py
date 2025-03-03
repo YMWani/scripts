@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import pathlib
 from tqdm import tqdm
 from pathlib import Path
+from scipy.optimize import curve_fit
+from scipy.stats import sem
 import json
 from matplotlib.cm import viridis
 current_dir = pathlib.Path(__file__).resolve().parent
@@ -10,33 +12,24 @@ plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
 import argparse
 
 """
-Analyze the density profile of "guest" chains in the simulation box along the
-z direction (long axis).
-
-Arguments:
-- filename: trajectory file name
-- chain_length: Number of monomers in a chain
-
+From a given trajectory of the guest chains, we want to measure the radius of gyration of the 
+chains at different locations inside the condensate.
 
 Steps are as follows:
-1. Read the lammps trajectory file "guest_chains.lammpstrj" to get the unwrapped
-particle positions.
-
-2. Get the masses of an individual chain.
-
-3. Compute the COM positions of the chains in the entire trajectory.
-
-4. Wrap the COM positions and atom positions inside simulation box.
-
-5. Compute the number density profile for every frame using the wrapped 
-atom positions/ COM positions.
-
-6. Save and plot data.
+1. Read lammps trajectory file (guest chains)
+2. Compute COM positions of the chains for every frame
+3. Compute radius of gyration and asphericity of the chains using the gyration tensor
+   at every frame.
+4. Wrap COM positions inside simulation box
+5. For every frame, sort the COM positions inside bins along the z direction
+6. Compute the mean Rg and mean asphericity of chains inside each bin, over the entire
+   trajectory.
+7. Save and plot data.
 """
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, required=True) # dir where data is stored
-parser.add_argument("--fname", type=str, required=True) # trajectory file
+parser.add_argument("--traj_guest", type=str, required=True) # trajectory file tracking the guest chains only
 parser.add_argument("--chain_length", type=int, required=True) # Length of the guest chains
 args = parser.parse_args()
 
@@ -186,103 +179,128 @@ def wrap_positions_inside_sim_box(positions, simBox):
             r[1] -= np.floor(r[1]/Ly)*Ly
             r[2] -= np.floor(r[2]/Lz)*Lz
     return positions
-
-def compute_number_density_profile(positions, simBox, nbins):
+    
+def compute_gyration_tensor(com_pos, atom_positions):
     """
-    Compute the density profile of all atoms/chains along the long axis 
-    of the simulation box.
+    For a given set of chains, this function computes the radius of gyration of the chains
+    by first computing the gyration tensor and its eigenvalues.
 
-    NOTE: Depending on the "positions" array we either compute the number 
-    density of individual monomers or of the chain center of masses.
-
-    NOTE: We expect wrapped positions.
+    Gyration tensor:
+    S_mn = 1/N * sum_{i=1}^{N} ri_m*ri_n,
+    where N: Number of monomers in a chain
+          ri: relative position of a monomer w.r.t. COM of the chain
+    
+    Radius of gyration:
+    If a1<=a2<=a3 are the eigenvalues of the gyration tensor,
+    then,
+    Rg^2 = a1+a2+a3
+    
+    Asphericity:
+    b = a3 - 0.5*(a1+a2)
 
     Arguments:
-    - positions (3d numpy array): [#frames, #chains, 3] / [#frames, #atoms, 3]
-    - simBox (2d numpy array): [[xmin,xmax] [ymin,ymax] [zmin,zmax]]
-    - nbins (int): # bins to histogram data. Higher bins leads to finer resolution,
-            but can lead to larger noise.
+    - com_pos (numpy array): [#chains, 3]
+    - atom_positions (numpy array): [#chains, #atoms-per-chain, 3]
+
+    Returns:
+    - Rgs (numpy array): [#chains,]
     """
-    nframes = positions.shape[0]
-    density_profile = np.zeros((nframes, nbins))
-    bin_width = (simBox[2][1] - simBox[2][0])/nbins
-    bin_volume = (simBox[0][1] - simBox[0][0]) * (simBox[1][1] - simBox[1][0]) * bin_width # Lx * Ly * bin_width
-    for idx, frame_pos in enumerate(tqdm(positions)):
-        hist_, bin_edges = np.histogram(frame_pos[:,2], bins=nbins,
-                                   range=(simBox[2][0], simBox[2][1]))
-        density_profile[idx] = hist_/bin_volume
-    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2.
-    return density_profile, bin_centers
-
-
+    nchains = com_pos.shape[0] # number of chains
+    Rgs = np.zeros(nchains) # Create empty array for storing radius of gyrations
+    asphericities = np.zeros(nchains) # Create empty array for storing apshericity of the chains
+    for i in range(nchains):
+        relative_pos = atom_positions[i] - com_pos[i] # shape: [#atoms-per-chain, 3]
+        gyration_tensor = np.einsum("im,in->mn", relative_pos, relative_pos)/relative_pos.shape[0]
+        eig_vals, eig_vecs = np.linalg.eig(gyration_tensor)
+        eig_vals_sorted = np.sort(eig_vals)
+        Rgs[i] = np.sqrt(np.sum(eig_vals))
+        asphericities[i] = eig_vals_sorted[2] - 0.5*(eig_vals_sorted[0]+eig_vals_sorted[1])
+    return Rgs, asphericities
 
 
 
 
 # Call functions
 if __name__=="__main__":
-    file_path=args.path
+    file_path = args.path
+    traj = args.traj_guest
     Nm = args.chain_length
 
     print(f"Extracting data from trajectory file.")
-    timesteps, box_sizes, num_atoms, atom_positions, atom_types = read_lammps_trajectory(f"{file_path}/guest_chains.lammpstrj", Nm)
-    
+    timesteps, box_sizes, num_atoms, atom_positions, atom_types = read_lammps_trajectory(f"{file_path}/{traj}", Nm)
+
     print(f"Trajectory file details:")
     print(f"# frames   :{len(timesteps)}")
     print(f"# particles:{num_atoms}")
     
-    # Reshape the position array to separate each chain
-    # New shape - (#frames, #chains, chain_length, 3)
-    atom_positions_reshaped = np.reshape(atom_positions,(atom_positions.shape[0], 
-                                                         atom_positions.shape[1]//args.chain_length,
-                                                         args.chain_length, 
-                                                         atom_positions.shape[2]))
+    # Reshape position array to separate each chain
+    atom_positions_reshaped = np.reshape(atom_positions,
+                                         (atom_positions.shape[0],
+                                          atom_positions.shape[1]//Nm,
+                                          Nm,
+                                          atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
     # Get the mass of chain monomers using particle types
     chain_masses = extract_particle_masses(atom_types)
     # Compute center of mass positions of the chains at every timestep
     # NOTE: Particle positions correspond to unwrapped positions.
+    print(f"Computing COM positions of the guest chains.")
     # COM_positions shape - (#frames, #chains, 3)
     COM_positions = compute_COM_positions(atom_positions_reshaped, chain_masses)
+    
+    # Compute radius of gyration of chains for every frame
+    print(f"Computing radius of gyration and asphericity of chains at every frame.")
+    radius_gyration = []
+    asphericities = []
+    for idx in tqdm(range(COM_positions.shape[0])):
+        Rgs, aspheris = compute_gyration_tensor(COM_positions[idx], atom_positions_reshaped[idx])
+        radius_gyration.append(Rgs)
+        asphericities.append(aspheris)
+    radius_gyration = np.array(radius_gyration)
+    asphericities = np.array(asphericities)
 
+    # Wrap COM positions inside simulation box to histogram data
     print(f"Wrapping atom and center of mass positions.")
-    # Wrap COM positions inside simulation box
     COM_wrapped = wrap_positions_inside_sim_box(COM_positions, box_sizes)
-    
-    # Wrap atom positions for density profile of all atoms
-    atom_positions_wrapped = wrap_positions_inside_sim_box(atom_positions, box_sizes)
 
-    # Get the density profile of all atoms over time
-    print(f"Computing density profile of all guest chain atoms over time.")
+    """
+    With the information about chain COMs and Rgs at every timestep/frame,
+    we will first sort chains into bins at every timestep and add the Rg
+    values to the respective bins.
+    """
     nbins = 50
-    number_density_all_atoms, bin_centers = compute_number_density_profile(atom_positions_wrapped, box_sizes,
-                                            nbins=nbins)
-    # Save data
-    np.savetxt(f"{file_path}/number_density_guest_atoms.dat",
-               np.column_stack((np.tile(bin_centers, number_density_all_atoms.shape[0]), 
-                                np.reshape(number_density_all_atoms, (-1,1)))),
-               header=f"bin_centers\tnum_density\t(nbins={nbins})")
-    
-    # Get density profile of the COM of chains over time
-    print(f"Computing density profile of guest chain COMs over time.")
-    number_density_COM, bin_centers = compute_number_density_profile(COM_wrapped, box_sizes,
-                                            nbins=nbins)
-    # Save data
-    np.savetxt(f"{file_path}/number_density_guest_COM.dat",
-               np.column_stack((np.tile(bin_centers, number_density_COM.shape[0]), 
-                                np.reshape(number_density_COM, (-1,1)))),
-               header=f"bin_centers\tnum_density\t(nbins={nbins})")
-    
-    # Plot data
-    nlines = 20
-    selected_frames = number_density_all_atoms[np.linspace(0, number_density_all_atoms.shape[0]-1, nlines, dtype=int)]
-    cmap = plt.get_cmap('viridis')
-    fig, ax = plt.subplots()
-    for i in range(nlines):
-        ax.plot(bin_centers, selected_frames[i], color=plt.cm.viridis(i/nlines), lw=1.0)
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=number_density_all_atoms.shape[0]-1))
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, orientation='vertical')
+    bin_edges = np.linspace(box_sizes[2][0], box_sizes[2][1], nbins+1)
+    bin_indices = (np.digitize(COM_wrapped[:,:,2], bin_edges) - 1).reshape((-1,))
+    radius_gyration_reshaped = radius_gyration.reshape((-1,))
+    asphericities_reshaped = asphericities.reshape((-1,))
+    Rg_binned = np.zeros((nbins,3))
+    asphericity_binned = np.zeros((nbins,3))
+    for idx in range(nbins):
+        mask = (bin_indices == idx)
+        mean_Rg = np.mean(radius_gyration_reshaped[mask])
+        err_Rg = sem(radius_gyration_reshaped[mask])
+        Rg_binned[idx,0] = (bin_edges[idx] + bin_edges[idx+1])/2.
+        Rg_binned[idx,1] = mean_Rg
+        Rg_binned[idx,2] = err_Rg
 
-    ax.set_xlabel(r"$z (\AA)$")
-    ax.set_ylabel(r"$n(z) \, (\AA^3)$")
-    plt.savefig("guest_chains_density_profile_with_time.pdf", dpi=600)
+        mean_aspheri = np.mean(asphericities_reshaped[mask])
+        err_aspheri = sem(asphericities_reshaped[mask])
+        asphericity_binned[idx,0] = (bin_edges[idx] + bin_edges[idx+1])/2.
+        asphericity_binned[idx,1] = mean_aspheri
+        asphericity_binned[idx,2] = err_aspheri
+
+    np.savetxt("Rg.dat", Rg_binned, header="bin_center\t<Rg>\t+/-")
+    np.savetxt("asphericity.dat", asphericity_binned, header="bin_center\t<asphericity>\t+/-")
+
+    # Plot data
+    fig, ax = plt.subplots()
+    ax.errorbar(Rg_binned[:,0], Rg_binned[:,1], yerr=Rg_binned[:,2], marker="o", lw=1.0)
+    ax.set_xlabel(r"$z \, (\AA)$")
+    ax.set_ylabel(r"$\mathrm{R_g}$")
+    plt.savefig("Rg.pdf", dpi=600)
+
+    fig, ax = plt.subplots()
+    ax.errorbar(asphericity_binned[:,0], asphericity_binned[:,1], yerr=asphericity_binned[:,2],
+                marker="o", lw=1.0)
+    ax.set_xlabel(r"$z \, (\AA)$")
+    ax.set_ylabel(r"$b$")
+    plt.savefig("asphericity.pdf", dpi=600)
