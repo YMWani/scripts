@@ -318,6 +318,53 @@ def compute_averaged_density_profile_2(density_prof):
     
     return bins, bin_density_mass, bin_density_number
 
+def is_integral_multiple(a, b, tolerance=1e-9):
+    """
+    Check if a is an integral multiple of b.
+
+    Parameters:
+    - a (float): The number to check.
+    - b (float): The base number.
+    - tolerance (float): The tolerance for floating-point comparison.
+
+    Returns:
+    - bool: True if a is an integral multiple of b, False otherwise.
+    """
+    if b == 0:
+        raise ValueError("The base number b cannot be zero.")
+    
+    remainder = a % b
+    return abs(remainder) < tolerance or abs(remainder - b) < tolerance
+
+def compute_number_density_profile(positions, simBox, bin_width):
+    """
+    Compute the density profile of all atoms/chains along the long axis 
+    of the simulation box.
+
+    NOTE: Depending on the "positions" array we either compute the number 
+    density of all atoms or of the chain center of masses.
+
+    NOTE: We expect wrapped positions.
+
+    Arguments:
+    - positions (3d numpy array): [#frames, #chains, 3] / [#frames, #atoms, 3]
+    - simBox (2d numpy array): [[xmin,xmax] [ymin,ymax] [zmin,zmax]]
+    - bin_width (float): Width of the bins in Angstroms (box length along z-axis should be an integral multiple of bin_width)
+    """
+    nframes = positions.shape[0]
+    # Confirm if box length along z-axis is an integral multiple of bin_width
+    if is_integral_multiple(simBox[2][1] - simBox[2][0], bin_width):
+        nbins = int((simBox[2][1] - simBox[2][0]) / bin_width)
+        density_profile = np.zeros((nframes, nbins))
+        bin_width = (simBox[2][1] - simBox[2][0])/nbins
+        bin_volume = (simBox[0][1] - simBox[0][0]) * (simBox[1][1] - simBox[1][0]) * bin_width
+        for idx, frame_pos in enumerate(positions):
+            hist_, bin_edges = np.histogram(frame_pos[:,2], bins=nbins,
+                                    range=(simBox[2][0], simBox[2][1]))
+            density_profile[idx] = hist_/bin_volume
+        bin_centers = (bin_edges[:-1] + bin_edges[1:])/2.
+    return density_profile, bin_centers
+
 
 def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
     """
