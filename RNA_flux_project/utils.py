@@ -336,8 +336,8 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     - fitted_profile: Fitted profile on the finely spaced bin centers
     """
     # fit super gaussian
-    super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-2*((x-x0)/sigma)**(2*np.round(p)))
-    initial_guess = [np.percentile(avg_profile, 80), np.mean(coords), np.std(coords), 2]
+    super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
+    initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess, maxfev=10000)
     A, x0, sigma, p = popt
     P = 2*np.round(p)
@@ -1017,7 +1017,7 @@ def write_cavity_with_protein1and2_config(simBox,
 
 def write_single_chain_config(sequence, outfile="config.dat"):
     """
-    Create a single chain LAMMPS config file for a gievn sequence
+    Create a single chain LAMMPS config file for a given sequence
 
     Arguments:
         - sequence (str): single character AA seq.
