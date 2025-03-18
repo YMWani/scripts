@@ -456,6 +456,30 @@ def compute_COM_positions(positions, mass):
     
     return com_positions
 
+def get_mass_by_id(amino_dict, id_to_find):
+    for amino_acid, data in amino_dict.items():
+        if data['id'] == id_to_find:
+            return data['mass']
+    return None
+
+def extract_particle_masses(types):
+    """
+    Extract the masses of particles given an array containing particle types
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        amino_acid_dict = json.load(f)
+    
+    masses = []
+    for type in types:
+        type = type%20 # We take remainder since we have 1-60 particle types.
+        if type == 0:
+            type = 20
+        mass = get_mass_by_id(amino_acid_dict, type)
+        masses.append(mass)
+
+    return masses
+
 
 def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
     """
