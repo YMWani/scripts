@@ -356,13 +356,15 @@ def compute_number_density_profile(positions, simBox, bin_width):
     if is_integral_multiple(simBox[2][1] - simBox[2][0], bin_width):
         nbins = int((simBox[2][1] - simBox[2][0]) / bin_width)
         density_profile = np.zeros((nframes, nbins))
-        bin_width = (simBox[2][1] - simBox[2][0])/nbins
-        bin_volume = (simBox[0][1] - simBox[0][0]) * (simBox[1][1] - simBox[1][0]) * bin_width
+        bin_width_recalculated = (simBox[2][1] - simBox[2][0])/nbins
+        bin_volume = (simBox[0][1] - simBox[0][0]) * (simBox[1][1] - simBox[1][0]) * bin_width_recalculated
         for idx, frame_pos in enumerate(positions):
             hist_, bin_edges = np.histogram(frame_pos[:,2], bins=nbins,
                                     range=(simBox[2][0], simBox[2][1]))
             density_profile[idx] = hist_/bin_volume
         bin_centers = (bin_edges[:-1] + bin_edges[1:])/2.
+    else:
+        raise ValueError("Box length along z-axis is not an integral multiple of bin_width.")
     return density_profile, bin_centers
 
 
@@ -423,6 +425,36 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
         left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
     
     return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
+
+
+def compute_COM_positions(positions, mass):
+    """
+    Compute the COM positions of chains at a given timestep.
+
+    Arguments:
+    - positions (3d numpy array): Atom positions for the chains at a given timestep
+                                  Expected shape (#chains, chain_length, 3)
+    - mass (1d numpy array): Atom masses for one chain (Every chain is the same)
+                             Expected shape (chain_length)
+
+    NOTE: The position array is expected to be sorted such that the atom sequence
+    for every chain corresponds to the mass array.
+                
+    Output:
+    - com_positions: Center of mass positions of all the chains
+                     Shape (#chains, 3)    
+    """
+    nchains = positions.shape[0]
+    com_positions = np.zeros(nchains, 3)
+    total_mass = np.sum(mass)
+
+    for chain_idx in range(nchains):
+        chain_pos = positions[chain_idx]
+        com_positions[chain_idx, 0] = np.sum(chain_pos[:,0]*mass)/total_mass
+        com_positions[chain_idx, 1] = np.sum(chain_pos[:,1]*mass)/total_mass
+        com_positions[chain_idx, 2] = np.sum(chain_pos[:,2]*mass)/total_mass
+    
+    return com_positions
 
 
 def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
@@ -645,6 +677,7 @@ def read_trajectory(file_name):
     coords = []
     box_bounds = []
     last_timestep_index = None
+    last_timestep = None
     with open(file_name, 'r') as f:
         lines = f.readlines()
 
@@ -652,6 +685,7 @@ def read_trajectory(file_name):
     for i in range(len(lines)):
         if "ITEM: TIMESTEP" in lines[i]:
             last_timestep_index = i
+            last_timestep = int(lines[i+1])
 
     if last_timestep_index is None:
         raise ValueError("No timestep found in the file.")
@@ -689,7 +723,7 @@ def read_trajectory(file_name):
             if mol_id > highest_mol_id:
                 highest_mol_id = mol_id
 
-    return box_bounds, coords, highest_mol_id
+    return box_bounds, coords, highest_mol_id, last_timestep
 
 def read_config(file_name):
     '''
