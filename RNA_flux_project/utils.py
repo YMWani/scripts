@@ -427,7 +427,26 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
 
 
-def compute_COM_positions(positions, mass):
+def wrap_positions(positions, box_bounds):
+    """
+    Wrap the positions of particles inside a simulation box.
+
+    Parameters:
+    - positions (numpy array): Array of particle positions with shape (n, 3), where n is the number of particles.
+    - box_bounds (numpy array): Array of box bounds with shape (3, 2), where each row represents [min, max] for x, y, z.
+
+    Returns:
+    - wrapped_positions (numpy array): Array of wrapped positions with the same shape as the input positions.
+    """
+    wrapped_positions = np.copy(positions)
+    for dim in range(3):  # Loop over x, y, z dimensions
+        box_min, box_max = box_bounds[dim]
+        box_length = box_max - box_min
+        wrapped_positions[:, dim] = box_min + (wrapped_positions[:, dim] - box_min) % box_length
+    return wrapped_positions
+
+
+def compute_COM_positions_multiple_chains(positions, mass):
     """
     Compute the COM positions of chains at a given timestep.
 
@@ -444,17 +463,41 @@ def compute_COM_positions(positions, mass):
     - com_positions: Center of mass positions of all the chains
                      Shape (#chains, 3)    
     """
-    nchains = positions.shape[0]
-    com_positions = np.zeros(nchains, 3)
+    # Compute the total mass of a chain
     total_mass = np.sum(mass)
 
-    for chain_idx in range(nchains):
-        chain_pos = positions[chain_idx]
-        com_positions[chain_idx, 0] = np.sum(chain_pos[:,0]*mass)/total_mass
-        com_positions[chain_idx, 1] = np.sum(chain_pos[:,1]*mass)/total_mass
-        com_positions[chain_idx, 2] = np.sum(chain_pos[:,2]*mass)/total_mass
-    
+    # Compute the weighted sum of positions along each dimension
+    # Use broadcasting to multiply positions by mass and sum along the chain length axis
+    com_positions = np.sum(positions * mass[:, np.newaxis], axis=1) / total_mass
+
     return com_positions
+
+def compute_COM_position(positions, mass):
+    """
+    Compute the COM positions of a given chain at a given timestep.
+
+    Arguments:
+    - positions (2d numpy array): Atom positions for the chain at a given timestep
+                                  Expected shape (chain_length, 3)
+    - mass (1d numpy array): Atom masses for one chain (Every chain is the same)
+                             Expected shape (chain_length)
+
+    NOTE: The position array is expected to be sorted such that the atom sequence
+    for every chain corresponds to the mass array.
+
+    Output:
+    - com_positions: Center of mass positions of all the chains
+                     Shape (3,)    
+    """
+    # Compute the total mass of a chain
+    total_mass = np.sum(mass)
+
+    # Compute the weighted sum of positions along each dimension
+    # Use broadcasting to multiply positions by mass and sum along the chain length axis
+    com_position = np.sum(positions * mass[:, np.newaxis], axis=0) / total_mass
+
+    return com_position
+
 
 def get_mass_by_id(amino_dict, id_to_find):
     for amino_acid, data in amino_dict.items():
