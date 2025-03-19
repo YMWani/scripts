@@ -686,6 +686,125 @@ def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5
     return ''.join(sequence), current_nscd
 
 
+def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per_chain, 
+                                    lattice_spacing, overlap_cutoff, max_chain_tries):
+    """
+    Attempts to add a single polymer chain to a simulation box using Monte Carlo insertions.
+    
+    Parameters:
+    box_bounds (array): Bounds of the simulation box [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
+    existing_positions (array): List of (x, y, z) coordinates of existing particles
+    monomers_per_chain (int): Number of monomers per chain
+    lattice_spacing (float): Minimum spacing between monomers for Monte Carlo insertions
+    overlap_cutoff (float): Minimum distance to avoid overlap with existing particles
+    max_chain_tries (int): Maximum attempts to place a new polymer chain
+    
+    Returns:
+    list: Positions of the newly added chain if successful, otherwise an empty list
+    """
+    directions = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) * lattice_spacing
+    
+    # Extract box bounds
+    x_min, x_max = box_bounds[0]
+    y_min, y_max = box_bounds[1]
+    z_min, z_max = box_bounds[2]
+    
+    for _ in range(max_chain_tries):
+        # Start with a random position within the simulation box bounds
+        start_position = np.array([
+            np.random.uniform(x_min, x_max),
+            np.random.uniform(y_min, y_max),
+            np.random.uniform(z_min, z_max)
+        ])
+        
+        # Check if the starting position overlaps with existing particles
+        if len(existing_positions) > 0:
+            if np.any(np.linalg.norm(existing_positions - start_position, axis=1) < overlap_cutoff):
+                continue
+        
+        chain = [start_position]
+        
+        for __ in range(monomers_per_chain - 1):
+            monomer_added = False
+            
+            np.random.shuffle(directions)  # Randomize direction order
+
+            for displacement in directions:
+                new_monomer = chain[-1] + displacement
+                
+                # Apply periodic boundary conditions
+                new_monomer = np.array([
+                    (new_monomer[0] - x_min) % (x_max - x_min) + x_min,
+                    (new_monomer[1] - y_min) % (y_max - y_min) + y_min,
+                    (new_monomer[2] - z_min) % (z_max - z_min) + z_min
+                ])
+                
+                # Check for overlaps with existing and new chain monomers
+                all_positions = np.vstack([existing_positions, chain])
+                if np.all(np.linalg.norm(all_positions - new_monomer, axis=1) >= overlap_cutoff):
+                    chain.append(new_monomer)
+                    monomer_added = True
+                    break
+            
+            if not monomer_added:
+                break  # Failed to add monomer, restart the chain insertion
+        
+        if len(chain) == monomers_per_chain:
+            print("Successfully added a chain.")
+            return chain  # Return the newly added chain's positions
+    
+    print("Failed to insert a polymer chain after max attempts.")
+    return []  # Return an empty list if insertion failed
+
+
+def determine_correct_atom_id_sequence(atom_ids, bond_data):
+    """
+    Determine the correct sequence of atoms in a linear chain.
+    
+    Parameters:
+    - atom_ids: List of atom IDs belonging to the chain
+    - bond_data: List of [atom1, atom2] pairs representing bonds
+    
+    Returns:
+    - ordered_atoms: List of atom IDs in the correct sequential order
+    """
+    # Create a dictionary to store connections
+    connections = {}
+    for atom1, atom2 in bond_data:
+        if atom1 not in connections:
+            connections[atom1] = []
+        if atom2 not in connections:
+            connections[atom2] = []
+        connections[atom1].append(atom2)
+        connections[atom2].append(atom1)
+    
+    # Find terminal atoms (atoms with only one connection)
+    terminal_atoms = [atom for atom in atom_ids if len(connections.get(atom, [])) == 1]
+    
+    # If we don't have exactly 2 terminal atoms, something is wrong
+    if len(terminal_atoms) != 2:
+        raise ValueError("Expected a linear chain with 2 terminal atoms, found " + 
+                         str(len(terminal_atoms)))
+    
+    # Start from the first terminal atom
+    current = terminal_atoms[0]
+    ordered_atoms = [int(current)]
+    visited = {current}
+    
+    # Follow the chain until we reach the other end
+    while len(ordered_atoms) < len(atom_ids):
+        # Get the next atom in the chain
+        for neighbor in connections[current]:
+            if neighbor not in visited:
+                current = neighbor
+                ordered_atoms.append(int(current))
+                visited.add(current)
+                break
+    
+    ordered_atoms = np.array(ordered_atoms)
+    
+    return ordered_atoms
+
 def extract_sequence_composition(seq):
     """
     Extract the AA coposition of a given sequence. The properties extracted are:
