@@ -850,67 +850,6 @@ def extract_sequence_composition(seq):
             "aromatic": aromatic/Nm}
 
 
-def read_trajectory(file_name):
-    '''
-    Reads in the unwrapped coordinates from the last frame of a LAMMPS trajectory file.
-    Returns a tuple with two arrays:
-    1. Box bounds as a numpy array with the format:
-        [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
-    2. Atom data as a numpy array with tuples of the format:
-        (atom number, molecule ID, type, charge, x, y, z)
-    3. The highest molecule ID
-    '''
-    coords = []
-    box_bounds = []
-    last_timestep_index = None
-    last_timestep = None
-    with open(file_name, 'r') as f:
-        lines = f.readlines()
-
-    # Find the last occurrence of "ITEM: TIMESTEP" which indicates the start of the last frame
-    for i in range(len(lines)):
-        if "ITEM: TIMESTEP" in lines[i]:
-            last_timestep_index = i
-            last_timestep = int(lines[i+1])
-
-    if last_timestep_index is None:
-        raise ValueError("No timestep found in the file.")
-
-    # Read the box bounds from the last frame
-    box_start_index = last_timestep_index + 5  # Skipping TIMESTEP, NUMBER OF ATOMS, and BOX BOUNDS headers
-    for i in range(box_start_index, box_start_index + 3):
-        bounds = [float(val) for val in lines[i].strip().split()]
-        box_bounds.append(bounds)
-
-    # Read atom data from the last frame
-    atom_data_start = box_start_index + 3  # Start of the atom data
-    reading_atoms = False
-    highest_mol_id = 0
-
-    for line in lines[atom_data_start:]:
-        if "ITEM: ATOMS" in line:
-            reading_atoms = True
-            continue
-        elif "ITEM:" in line:
-            break  # Stop reading when another section starts
-        elif reading_atoms:
-            atom_data = line.strip().split()
-            atom_number = int(atom_data[0])
-            mol_id = int(atom_data[1])
-            atom_type = int(atom_data[2])
-            charge = float(atom_data[3])
-            x = float(atom_data[4])
-            y = float(atom_data[5])
-            z = float(atom_data[6])
-
-            # Append the tuple to the list
-            coords.append((atom_number, mol_id, atom_type, charge, x, y, z))
-
-            if mol_id > highest_mol_id:
-                highest_mol_id = mol_id
-
-    return box_bounds, coords, highest_mol_id, last_timestep
-
 def read_config(file_name):
     '''
     Reads a LAMMPS configuration file and extracts the number of atoms, number of bonds,
@@ -2119,6 +2058,115 @@ def create_interaction_matrix(filename):
     
     df.to_csv("interaction_matrix.csv", index=False, header=False)
 
+def read_trajectory(file_name):
+    '''
+    Reads in the unwrapped coordinates from the last frame of a LAMMPS trajectory file.
+    Returns a tuple with two arrays:
+    1. Box bounds as a numpy array with the format:
+        [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
+    2. Atom data as a numpy array with tuples of the format:
+        (atom number, molecule ID, type, charge, x, y, z)
+    3. The highest molecule ID
+    '''
+    coords = []
+    box_bounds = []
+    last_timestep_index = None
+    last_timestep = None
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+
+    # Find the last occurrence of "ITEM: TIMESTEP" which indicates the start of the last frame
+    for i in range(len(lines)):
+        if "ITEM: TIMESTEP" in lines[i]:
+            last_timestep_index = i
+            last_timestep = int(lines[i+1])
+
+    if last_timestep_index is None:
+        raise ValueError("No timestep found in the file.")
+
+    # Read the box bounds from the last frame
+    box_start_index = last_timestep_index + 5  # Skipping TIMESTEP, NUMBER OF ATOMS, and BOX BOUNDS headers
+    for i in range(box_start_index, box_start_index + 3):
+        bounds = [float(val) for val in lines[i].strip().split()]
+        box_bounds.append(bounds)
+
+    # Read atom data from the last frame
+    atom_data_start = box_start_index + 3  # Start of the atom data
+    reading_atoms = False
+    highest_mol_id = 0
+
+    for line in lines[atom_data_start:]:
+        if "ITEM: ATOMS" in line:
+            reading_atoms = True
+            continue
+        elif "ITEM:" in line:
+            break  # Stop reading when another section starts
+        elif reading_atoms:
+            atom_data = line.strip().split()
+            atom_number = int(atom_data[0])
+            mol_id = int(atom_data[1])
+            atom_type = int(atom_data[2])
+            charge = float(atom_data[3])
+            x = float(atom_data[4])
+            y = float(atom_data[5])
+            z = float(atom_data[6])
+
+            # Append the tuple to the list
+            coords.append((atom_number, mol_id, atom_type, charge, x, y, z))
+
+            if mol_id > highest_mol_id:
+                highest_mol_id = mol_id
+
+    return box_bounds, coords, highest_mol_id, last_timestep
+
+def read_trajectory_last_frame(file_name):
+    """
+    Efficiently reads the last frame of a LAMMPS trajectory file to extract positions of all chains.
+    """
+    # First pass to determine the last frame and number of atoms
+    last_timestep_position = None
+    num_atoms = 0
+
+    with open(file_name, 'r') as file:
+        for idx, line in enumerate(file):
+            if 'ITEM: TIMESTEP' in line:
+                last_timestep_position = idx  # Save the file position of the last timestep
+            elif 'ITEM: NUMBER OF ATOMS' in line and num_atoms == 0:
+                num_atoms = int(next(file).strip())
+    
+    if last_timestep_position is None:
+        raise ValueError("No timestep found in the file.")
+
+    # Pre-allocate arrays for the last frame
+    box_sizes = np.zeros((3, 2), dtype=float)
+    coords = np.zeros((num_atoms, 7), dtype=float)
+
+    # Second pass to read the last frame
+    with open(file_name, 'r') as file:
+        for idx, line in enumerate(file):
+            if idx <= last_timestep_position:
+                continue
+            
+            if 'ITEM: TIMESTEP' in line:
+                last_timestep = int(next(file).strip())
+            
+            elif 'ITEM: BOX BOUNDS' in line:
+                for i in range(3):
+                    box_sizes[i] = list(map(float, next(file).strip().split()))
+            
+            elif 'ITEM: ATOMS' in line:
+                for i in range(num_atoms):
+                    atom_data = next(file).strip().split()
+                    coords[i,0] = int(atom_data[0])
+                    coords[i,1] = int(atom_data[1])
+                    coords[i,2] = int(atom_data[2])
+                    coords[i,3] = float(atom_data[3])
+                    coords[i,4] = float(atom_data[4])
+                    coords[i,5] = float(atom_data[5])
+                    coords[i,6] = float(atom_data[6])
+                break  # Exit after reading the last frame's atom data
+
+    return box_sizes, coords, last_timestep
 
 if __name__ == "__main__":
     print("Executing function calls from within the script")
