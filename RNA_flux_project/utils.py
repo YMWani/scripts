@@ -957,7 +957,8 @@ def read_config(file_name):
 
     return num_atoms, num_bonds, bonds
 
-def write_slab_config(required_box_bounds,
+def write_slab_config(file_name,
+                      required_box_bounds,
                       protein_coords, 
                       num_atoms, 
                       num_bonds, 
@@ -980,7 +981,7 @@ def write_slab_config(required_box_bounds,
     
     num_atom_types = 20
 
-    configFile = open('initialSlab.dat','w')
+    configFile = open(f'{file_name}','w')
     configFile.write('LAMMPS data file for slab of IDP\n\n')
 
     # Overall data
