@@ -318,133 +318,6 @@ def compute_averaged_density_profile_2(density_prof):
     
     return bins, bin_density_mass, bin_density_number
 
-def is_integral_multiple(a, b, tolerance=1e-9):
-    """
-    Check if a is an integral multiple of b.
-
-    Parameters:
-    - a (float): The number to check.
-    - b (float): The base number.
-    - tolerance (float): The tolerance for floating-point comparison.
-
-    Returns:
-    - bool: True if a is an integral multiple of b, False otherwise.
-    """
-    if b == 0:
-        raise ValueError("The base number b cannot be zero.")
-    
-    remainder = a % b
-    return abs(remainder) < tolerance or abs(remainder - b) < tolerance
-
-def compute_number_density_profile(positions, simBox, bin_width):
-    """
-    Compute the density profile of all atoms/chains along the long axis 
-    of the simulation box.
-
-    NOTE: Depending on the "positions" array we either compute the number 
-    density of all atoms or of the chain center of masses.
-
-    NOTE: We expect wrapped positions.
-
-    Arguments:
-    - positions (3d numpy array): [#frames, #chains, 3] / [#frames, #atoms, 3]
-    - simBox (2d numpy array): [[xmin,xmax] [ymin,ymax] [zmin,zmax]]
-    - bin_width (float): Width of the bins in Angstroms (box length along z-axis should be an integral multiple of bin_width)
-    """
-    nframes = positions.shape[0]
-    # Confirm if box length along z-axis is an integral multiple of bin_width
-    if is_integral_multiple(simBox[2][1] - simBox[2][0], bin_width):
-        nbins = int((simBox[2][1] - simBox[2][0]) / bin_width)
-        density_profile = np.zeros((nframes, nbins))
-        bin_width_recalculated = (simBox[2][1] - simBox[2][0])/nbins
-        bin_volume = (simBox[0][1] - simBox[0][0]) * (simBox[1][1] - simBox[1][0]) * bin_width_recalculated
-        for idx, frame_pos in enumerate(positions):
-            hist_, bin_edges = np.histogram(frame_pos[:,2], bins=nbins,
-                                    range=(simBox[2][0], simBox[2][1]))
-            density_profile[idx] = hist_/bin_volume
-        bin_centers = (bin_edges[:-1] + bin_edges[1:])/2.
-    else:
-        raise ValueError("Box length along z-axis is not an integral multiple of bin_width.")
-    return density_profile, bin_centers
-
-
-def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
-    """
-    This function takes averaged density profile for a direct coexistence simulations
-    and fits a super gaussian function to the profile. From the second derivative of the 
-    super gaussian one can extract the interface coordinates of the slab.
-
-    Parameters:
-    - coords (array): bin_centers of the density profile
-    - avg_profile (array): bin_densities of the density profile
-
-    Output:
-    - left_interface_coord
-    - right_interface_coord
-    - fine_coords: finely spaced bin centers
-    - fitted_profile: Fitted profile on the finely spaced bin centers
-    """
-    # fit super gaussian
-    super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
-    initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
-    popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess, maxfev=10000)
-    A, x0, sigma, p = popt
-    P = 2*np.round(p)
-    fine_coords = np.linspace(min(coords), max(coords), num=1000)
-    fitted_profile = super_gaussian(fine_coords, *popt)
-    # compute second derivative
-    first_derivative = np.gradient(fitted_profile)
-    second_derivative = np.gradient(first_derivative)
-    # binarize normalized second derivatives with derivative threshold and get interfaces
-    threshold = derivative_threshold # units: (density per length per length) / length
-    binarized = [abs(x)/max(fitted_profile) <= threshold for x in second_derivative]
-    num_clusters = 1
-    ## keep track of "True" cluster boundaries for plotting
-    true_cluster_boundaries = []
-    curr_cluster = [0] if binarized[0] else []
-    for idx in range(1, len(binarized)):
-        if binarized[idx] != binarized[idx-1]:
-            num_clusters += 1
-            if binarized[idx]:
-                curr_cluster.append(fine_coords[idx])
-            else:
-                curr_cluster.append(fine_coords[idx-1])
-                true_cluster_boundaries.append(curr_cluster)
-                curr_cluster = []
-    if len(curr_cluster) == 1: # ends on True cluster that doesn't get closed in loop, which will be common
-        curr_cluster.append(fine_coords[-1])
-        true_cluster_boundaries.append(curr_cluster)
-    num_clusters += 1
-    num_clusters /= 2
-    if binarized[0]==True and binarized[-1]==True and num_clusters == 5: # clean condensate; zero second derivative on ends, slope up/down and the middle
-        left_interface_coord = fine_coords[round(([idx for idx in range(1, len(binarized)) if binarized[idx] == False and binarized[idx-1] == True][1] + [idx for idx in range(1, len(binarized)) if binarized[idx] == True and binarized[idx-1] == False][0])/2)]
-        right_interface_coord = fine_coords[round(([idx for idx in list(reversed(range(0, len(binarized)-2))) if binarized[idx] == False and binarized[idx+1] == True][1] + [idx for idx in list(reversed(range(0, len(binarized)-2))) if binarized[idx] == True and binarized[idx+1] == False][0])/2)]
-        if (left_interface_coord + (max(fine_coords)-right_interface_coord)) <= min_dilute_size_multiplier * right_interface_coord - left_interface_coord: # ensure dilute phase isn't too small
-            left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
-    else:
-        left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
-    
-    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
-
-
-def wrap_positions(positions, box_bounds):
-    """
-    Wrap the positions of particles inside a simulation box.
-
-    Parameters:
-    - positions (numpy array): Array of particle positions with shape (n, 3), where n is the number of particles.
-    - box_bounds (numpy array): Array of box bounds with shape (3, 2), where each row represents [min, max] for x, y, z.
-
-    Returns:
-    - wrapped_positions (numpy array): Array of wrapped positions with the same shape as the input positions.
-    """
-    wrapped_positions = np.copy(positions)
-    for dim in range(3):  # Loop over x, y, z dimensions
-        box_min, box_max = box_bounds[dim]
-        box_length = box_max - box_min
-        wrapped_positions[:, dim] = box_min + (wrapped_positions[:, dim] - box_min) % box_length
-    return wrapped_positions
-
 
 def compute_COM_positions_multiple_chains(positions, mass):
     """
@@ -471,57 +344,6 @@ def compute_COM_positions_multiple_chains(positions, mass):
     com_positions = np.sum(positions * mass[:, np.newaxis], axis=1) / total_mass
 
     return com_positions
-
-def compute_COM_position(positions, mass):
-    """
-    Compute the COM positions of a given chain at a given timestep.
-
-    Arguments:
-    - positions (2d numpy array): Atom positions for the chain at a given timestep
-                                  Expected shape (chain_length, 3)
-    - mass (1d numpy array): Atom masses for one chain (Every chain is the same)
-                             Expected shape (chain_length)
-
-    NOTE: The position array is expected to be sorted such that the atom sequence
-    for every chain corresponds to the mass array.
-
-    Output:
-    - com_positions: Center of mass positions of all the chains
-                     Shape (3,)    
-    """
-    # Compute the total mass of a chain
-    total_mass = np.sum(mass)
-
-    # Compute the weighted sum of positions along each dimension
-    # Use broadcasting to multiply positions by mass and sum along the chain length axis
-    com_position = np.sum(positions * mass[:, np.newaxis], axis=0) / total_mass
-
-    return com_position
-
-
-def get_mass_by_id(amino_dict, id_to_find):
-    for amino_acid, data in amino_dict.items():
-        if data['id'] == id_to_find:
-            return data['mass']
-    return None
-
-def extract_particle_masses(types):
-    """
-    Extract the masses of particles given an array containing particle types
-    """
-    parent_dir = Path(__file__).parent
-    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
-        amino_acid_dict = json.load(f)
-    
-    masses = []
-    for type in types:
-        type = type%20 # We take remainder since we have 1-60 particle types.
-        if type == 0:
-            type = 20
-        mass = get_mass_by_id(amino_acid_dict, type)
-        masses.append(mass)
-
-    return masses
 
 
 def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
@@ -686,77 +508,6 @@ def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5
     return ''.join(sequence), current_nscd
 
 
-def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per_chain, 
-                                    lattice_spacing, overlap_cutoff, max_chain_tries):
-    """
-    Attempts to add a single polymer chain to a simulation box using Monte Carlo insertions.
-    
-    Parameters:
-    box_bounds (array): Bounds of the simulation box [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
-    existing_positions (array): List of (x, y, z) coordinates of existing particles
-    monomers_per_chain (int): Number of monomers per chain
-    lattice_spacing (float): Minimum spacing between monomers for Monte Carlo insertions
-    overlap_cutoff (float): Minimum distance to avoid overlap with existing particles
-    max_chain_tries (int): Maximum attempts to place a new polymer chain
-    
-    Returns:
-    list: Positions of the newly added chain if successful, otherwise an empty list
-    """
-    directions = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) * lattice_spacing
-    
-    # Extract box bounds
-    x_min, x_max = box_bounds[0]
-    y_min, y_max = box_bounds[1]
-    z_min, z_max = box_bounds[2]
-    
-    for _ in range(max_chain_tries):
-        # Start with a random position within the simulation box bounds
-        start_position = np.array([
-            np.random.uniform(x_min, x_max),
-            np.random.uniform(y_min, y_max),
-            np.random.uniform(z_min, z_max)
-        ])
-        
-        # Check if the starting position overlaps with existing particles
-        if len(existing_positions) > 0:
-            if np.any(np.linalg.norm(existing_positions - start_position, axis=1) < overlap_cutoff):
-                continue
-        
-        chain = [start_position]
-        
-        for __ in range(monomers_per_chain - 1):
-            monomer_added = False
-            
-            np.random.shuffle(directions)  # Randomize direction order
-
-            for displacement in directions:
-                new_monomer = chain[-1] + displacement
-                
-                # Apply periodic boundary conditions
-                new_monomer = np.array([
-                    (new_monomer[0] - x_min) % (x_max - x_min) + x_min,
-                    (new_monomer[1] - y_min) % (y_max - y_min) + y_min,
-                    (new_monomer[2] - z_min) % (z_max - z_min) + z_min
-                ])
-                
-                # Check for overlaps with existing and new chain monomers
-                all_positions = np.vstack([existing_positions, chain])
-                if np.all(np.linalg.norm(all_positions - new_monomer, axis=1) >= overlap_cutoff):
-                    chain.append(new_monomer)
-                    monomer_added = True
-                    break
-            
-            if not monomer_added:
-                break  # Failed to add monomer, restart the chain insertion
-        
-        if len(chain) == monomers_per_chain:
-            print("Successfully added a chain.")
-            return chain  # Return the newly added chain's positions
-    
-    print("Failed to insert a polymer chain after max attempts.")
-    return []  # Return an empty list if insertion failed
-
-
 def determine_correct_atom_id_sequence(atom_ids, bond_data):
     """
     Determine the correct sequence of atoms in a linear chain.
@@ -849,52 +600,6 @@ def extract_sequence_composition(seq):
             "positive_with_pi": positive_with_pi/Nm, 
             "aromatic": aromatic/Nm}
 
-
-def read_config(file_name):
-    '''
-    Reads a LAMMPS configuration file and extracts the number of atoms, number of bonds,
-    and bond information.
-
-    Returns:
-    - num_atoms: The number of atoms in the configuration file.
-    - num_bonds: The number of bonds in the configuration file.
-    - bonds: A numpy array of tuples containing the bond information.
-        Each tuple has the form (bond ID, bond type, first atom ID, second atom ID).
-    '''
-    num_atoms = 0
-    num_bonds = 0
-    bonds = []
-    in_bond_section = False
-
-    with open(file_name, 'r') as file:
-        for line in file:
-            line = line.strip()
-
-            # Read number of atoms
-            if 'atoms' in line and num_atoms == 0:
-                num_atoms = int(line.split()[0])
-
-            # Read number of bonds
-            elif 'bonds' in line and num_bonds == 0:
-                num_bonds = int(line.split()[0])
-
-            # Read bond information
-            elif 'Bonds' in line:
-                in_bond_section = True
-                continue  # Skip the "Bonds" header
-
-            # Start reading bond data if in the bond section
-            if in_bond_section:
-                if len(line.split()) != 4:
-                    continue  # End of bond section
-                bond_data = [int(x) for x in line.split()]
-                bond_id = bond_data[0]
-                bond_type = bond_data[1]
-                first_atom_id = bond_data[2]
-                second_atom_id = bond_data[3]
-                bonds.append((bond_id, bond_type, first_atom_id, second_atom_id))
-
-    return num_atoms, num_bonds, bonds
 
 def write_slab_config(file_name,
                       required_box_bounds,
@@ -2058,6 +1763,8 @@ def create_interaction_matrix(filename):
     
     df.to_csv("interaction_matrix.csv", index=False, header=False)
 
+# ........... Function required for flux simulations .......................
+
 def read_trajectory(file_name):
     '''
     Reads in the unwrapped coordinates from the last frame of a LAMMPS trajectory file.
@@ -2167,6 +1874,311 @@ def read_trajectory_last_frame(file_name):
                 break  # Exit after reading the last frame's atom data
 
     return box_sizes, coords, last_timestep
+
+def read_config(file_name):
+    '''
+    Reads a LAMMPS configuration file and extracts the number of atoms, number of bonds,
+    and bond information.
+
+    Returns:
+    - num_atoms: The number of atoms in the configuration file.
+    - num_bonds: The number of bonds in the configuration file.
+    - bonds: A numpy array of tuples containing the bond information.
+        Each tuple has the form (bond ID, bond type, first atom ID, second atom ID).
+    '''
+    num_atoms = 0
+    num_bonds = 0
+    bonds = []
+    in_bond_section = False
+
+    with open(file_name, 'r') as file:
+        for line in file:
+            line = line.strip()
+
+            # Read number of atoms
+            if 'atoms' in line and num_atoms == 0:
+                num_atoms = int(line.split()[0])
+
+            # Read number of bonds
+            elif 'bonds' in line and num_bonds == 0:
+                num_bonds = int(line.split()[0])
+
+            # Read bond information
+            elif 'Bonds' in line:
+                in_bond_section = True
+                continue  # Skip the "Bonds" header
+
+            # Start reading bond data if in the bond section
+            if in_bond_section:
+                if len(line.split()) != 4:
+                    continue  # End of bond section
+                bond_data = [int(x) for x in line.split()]
+                bond_id = bond_data[0]
+                bond_type = bond_data[1]
+                first_atom_id = bond_data[2]
+                second_atom_id = bond_data[3]
+                bonds.append((bond_id, bond_type, first_atom_id, second_atom_id))
+
+    return num_atoms, num_bonds, bonds
+
+def wrap_positions(positions, box_bounds):
+    """
+    Wrap the positions of particles inside a simulation box.
+
+    Parameters:
+    - positions (numpy array): Array of particle positions with shape (n, 3), where n is the number of particles.
+    - box_bounds (numpy array): Array of box bounds with shape (3, 2), where each row represents [min, max] for x, y, z.
+
+    Returns:
+    - wrapped_positions (numpy array): Array of wrapped positions with the same shape as the input positions.
+    """
+    wrapped_positions = np.copy(positions)
+    for dim in range(3):  # Loop over x, y, z dimensions
+        box_min, box_max = box_bounds[dim]
+        box_length = box_max - box_min
+        wrapped_positions[:, dim] = box_min + (wrapped_positions[:, dim] - box_min) % box_length
+    return wrapped_positions
+
+def is_integral_multiple(a, b, tolerance=1e-9):
+    """
+    Check if a is an integral multiple of b.
+
+    Parameters:
+    - a (float): The number to check.
+    - b (float): The base number.
+    - tolerance (float): The tolerance for floating-point comparison.
+
+    Returns:
+    - bool: True if a is an integral multiple of b, False otherwise.
+    """
+    if b == 0:
+        raise ValueError("The base number b cannot be zero.")
+    
+    remainder = a % b
+    return abs(remainder) < tolerance or abs(remainder - b) < tolerance
+
+def compute_number_density_profile(positions, simBox, bin_width):
+    """
+    Compute the density profile of all atoms/chains along the long axis 
+    of the simulation box.
+
+    NOTE: WRAPPED COORDINATES are expected.
+
+    Arguments:
+    - positions (3d numpy array): [#frames, #atoms, 3]
+    - simBox (2d numpy array): [[xmin,xmax] [ymin,ymax] [zmin,zmax]]
+    - bin_width (float): Width of the bins in Angstroms (box length along z-axis should be an integral multiple of bin_width)
+    """
+    nframes = positions.shape[0]
+
+    # Confirm if box length along z-axis is an integral multiple of bin_width
+    if is_integral_multiple(simBox[2][1] - simBox[2][0], bin_width):
+        # Number of bins for histogram
+        nbins = int((simBox[2][1] - simBox[2][0]) / bin_width)
+        # Create empty array for storing data
+        density_profile = np.zeros((nframes, nbins))
+        # Calculate bin volume
+        bin_width_recalculated = (simBox[2][1] - simBox[2][0])/nbins
+        bin_volume = (simBox[0][1] - simBox[0][0]) * (simBox[1][1] - simBox[1][0]) * bin_width_recalculated
+        # Iterate through all the frames
+        for idx, frame_pos in enumerate(positions):
+            # Compute histogram
+            hist_, bin_edges = np.histogram(frame_pos[:,2], bins=nbins,
+                                    range=(simBox[2][0], simBox[2][1]))
+            # Convert to number density
+            density_profile[idx] = hist_/bin_volume
+        # Compute the mean density profile across all frames
+        density_profile = np.mean(density_profile, axis=0)
+        # Compute bin centers
+        bin_centers = (bin_edges[:-1] + bin_edges[1:])/2.
+    # If box length along z-axis is not an integral multiple of bin_width
+    else:
+        raise ValueError("Box length along z-axis is not an integral multiple of bin_width.")
+    
+    return density_profile, bin_centers
+
+def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
+    """
+    This function takes averaged density profile for a direct coexistence simulations
+    and fits a super gaussian function to the profile. From the second derivative of the 
+    super gaussian one can extract the interface coordinates of the slab.
+
+    Parameters:
+    - coords (array): bin_centers of the density profile
+    - avg_profile (array): bin_densities of the density profile
+
+    Output:
+    - left_interface_coord
+    - right_interface_coord
+    - fine_coords: finely spaced bin centers
+    - fitted_profile: Fitted profile on the finely spaced bin centers
+    """
+    # fit super gaussian
+    super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
+    initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
+    popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess, maxfev=10000)
+    A, x0, sigma, p = popt
+    P = 2*np.round(p)
+    fine_coords = np.linspace(min(coords), max(coords), num=1000)
+    fitted_profile = super_gaussian(fine_coords, *popt)
+    # compute second derivative
+    first_derivative = np.gradient(fitted_profile)
+    second_derivative = np.gradient(first_derivative)
+    # binarize normalized second derivatives with derivative threshold and get interfaces
+    threshold = derivative_threshold # units: (density per length per length) / length
+    binarized = [abs(x)/max(fitted_profile) <= threshold for x in second_derivative]
+    num_clusters = 1
+    ## keep track of "True" cluster boundaries for plotting
+    true_cluster_boundaries = []
+    curr_cluster = [0] if binarized[0] else []
+    for idx in range(1, len(binarized)):
+        if binarized[idx] != binarized[idx-1]:
+            num_clusters += 1
+            if binarized[idx]:
+                curr_cluster.append(fine_coords[idx])
+            else:
+                curr_cluster.append(fine_coords[idx-1])
+                true_cluster_boundaries.append(curr_cluster)
+                curr_cluster = []
+    if len(curr_cluster) == 1: # ends on True cluster that doesn't get closed in loop, which will be common
+        curr_cluster.append(fine_coords[-1])
+        true_cluster_boundaries.append(curr_cluster)
+    num_clusters += 1
+    num_clusters /= 2
+    if binarized[0]==True and binarized[-1]==True and num_clusters == 5: # clean condensate; zero second derivative on ends, slope up/down and the middle
+        left_interface_coord = fine_coords[round(([idx for idx in range(1, len(binarized)) if binarized[idx] == False and binarized[idx-1] == True][1] + [idx for idx in range(1, len(binarized)) if binarized[idx] == True and binarized[idx-1] == False][0])/2)]
+        right_interface_coord = fine_coords[round(([idx for idx in list(reversed(range(0, len(binarized)-2))) if binarized[idx] == False and binarized[idx+1] == True][1] + [idx for idx in list(reversed(range(0, len(binarized)-2))) if binarized[idx] == True and binarized[idx+1] == False][0])/2)]
+        if (left_interface_coord + (max(fine_coords)-right_interface_coord)) <= min_dilute_size_multiplier * right_interface_coord - left_interface_coord: # ensure dilute phase isn't too small
+            left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
+    else:
+        left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
+    
+    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
+
+def extract_particle_masses(types):
+    """
+    Extract the masses of particles given an array containing particle types
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        amino_acid_dict = json.load(f)
+    
+    masses = []
+    for type in types:
+        type = type%20 # We take remainder since we have 1-60 particle types.
+        if type == 0:
+            type = 20
+        mass = get_mass_by_id(amino_acid_dict, type)
+        masses.append(mass)
+
+    return masses
+
+def get_mass_by_id(amino_dict, id_to_find):
+    for amino_acid, data in amino_dict.items():
+        if data['id'] == id_to_find:
+            return data['mass']
+    return None
+
+def compute_COM_position(positions, mass):
+    """
+    Compute the COM positions of a given chain at a given timestep.
+
+    Arguments:
+    - positions (2d numpy array): Atom positions for the chain at a given timestep
+                                  Expected shape (chain_length, 3)
+    - mass (1d numpy array): Atom masses for one chain (Every chain is the same)
+                             Expected shape (chain_length)
+
+    NOTE: The position array is expected to be sorted such that the atom sequence
+    for every chain corresponds to the mass array.
+
+    Output:
+    - com_positions: Center of mass positions of all the chains
+                     Shape (3,)    
+    """
+    # Compute the total mass of a chain
+    total_mass = np.sum(mass)
+
+    # Compute the weighted sum of positions along each dimension
+    # Use broadcasting to multiply positions by mass and sum along the chain length axis
+    com_position = np.sum(positions * mass[:, np.newaxis], axis=0) / total_mass
+
+    return com_position
+
+def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per_chain, 
+                                    lattice_spacing, overlap_cutoff, max_chain_tries):
+    """
+    Attempts to add a single polymer chain to a simulation box using Monte Carlo insertions.
+    
+    Parameters:
+    box_bounds (array): Bounds of the simulation box [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
+    existing_positions (array): List of (x, y, z) coordinates of existing particles
+    monomers_per_chain (int): Number of monomers per chain
+    lattice_spacing (float): Minimum spacing between consecutive monomers for Monte Carlo insertions
+    overlap_cutoff (float): Minimum distance to avoid overlap with existing particles
+    max_chain_tries (int): Maximum attempts to place a new polymer chain
+    
+    Returns:
+    list: Positions of the newly added chain if successful, otherwise an empty list
+    """
+    directions = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) * lattice_spacing
+    
+    # Extract box bounds
+    x_min, x_max = box_bounds[0]
+    y_min, y_max = box_bounds[1]
+    z_min, z_max = box_bounds[2]
+    
+    for _ in range(max_chain_tries):
+        # Start with a random position within the simulation box bounds
+        # NOTE: Cavity should not have a periodic boundary in the z direction. But I still keep it here
+        # since the overlap with cavity monomers should do the job of eleminating the periodic boundary issue.
+        start_position = np.array([
+            np.random.uniform(x_min, x_max),
+            np.random.uniform(y_min, y_max),
+            np.random.uniform(z_min, z_max)
+        ])
+        
+        # Check if the starting position overlaps with existing particles
+        if len(existing_positions) > 0:
+            if np.any(np.linalg.norm(existing_positions - start_position, axis=1) < overlap_cutoff):
+                continue
+        
+        chain = [start_position] # unwrapped coordinates
+        
+        for __ in range(monomers_per_chain - 1):
+            monomer_added = False
+            
+            np.random.shuffle(directions)  # Randomize direction order
+
+            for displacement in directions:
+                new_monomer = chain[-1] + displacement
+                
+                # Apply periodic boundary conditions
+                new_monomer_wrapped = np.array([
+                    (new_monomer[0] - x_min) % (x_max - x_min) + x_min,
+                    (new_monomer[1] - y_min) % (y_max - y_min) + y_min,
+                    (new_monomer[2] - z_min) % (z_max - z_min) + z_min
+                ])
+                
+                # Check for overlaps with existing and new chain monomers
+                chain_wrapped = wrap_positions(np.array(chain), box_bounds) # We need to wrap the chain before checking for overlaps
+                all_positions = np.vstack([existing_positions, chain_wrapped])
+                if np.all(np.linalg.norm(all_positions - new_monomer_wrapped, axis=1) >= overlap_cutoff):
+                    chain.append(new_monomer)
+                    monomer_added = True
+                    break
+            
+            if not monomer_added:
+                break  # Failed to add monomer, restart the chain insertion
+        
+        if len(chain) == monomers_per_chain:
+            print("Successfully added a chain.")
+            return chain  # Return the newly added chain's positions
+    
+    print("Failed to insert a polymer chain after max attempts.")
+    return []  # Return an empty list if insertion failed
+
+
 
 if __name__ == "__main__":
     print("Executing function calls from within the script")
