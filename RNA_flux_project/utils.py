@@ -2178,6 +2178,66 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
     print("Failed to insert a polymer chain after max attempts.")
     return []  # Return an empty list if insertion failed
 
+def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_bonds, bond_data):
+    """
+    Create a config file for a slab simulation given the follwing information:
+    - required_box_bounds (list): A list containing the lower and upper bounds of the slab that we want to generate
+    - protein_coords (list of tuples): A list of tuples containing details for each atom
+                                      (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - num_atoms (int): Number of particles in the system
+    - num_bonds (int): Number of bonds in the system
+    - bond_data (list of tuples): Bond data for the protein chains
+                                 (bond_id, bond_type, first_atom_id, second_atom_id)
+    
+    Returns: Config file for slab simulations - "initialSlab.dat"
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    num_atom_types = 60 # Our setup requires 3*20 atom types
+
+    configFile = open(f'{file_name}','w')
+    configFile.write('LAMMPS data file for slab of IDP\n\n')
+
+    # Overall data
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n')
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n')
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(required_box_bounds[0][0],required_box_bounds[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(required_box_bounds[1][0],required_box_bounds[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(required_box_bounds[2][0],required_box_bounds[2][1]))
+    
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for host chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+    # Third, assign ids and masses for Amino acids for guest chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+40} {value.get('mass')}\n")
+
+    # Particle positions
+    configFile.write('\nAtoms\n\n')
+    
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+        configFile.write('%d %d %d %f %f %f %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+
+    # Bond data
+    configFile.write('\nBonds\n\n')
+
+    for bond_id, bond_type, first_atom_id, second_atom_id in bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+    
+    # Close file
+    configFile.close()    
+
 
 
 if __name__ == "__main__":
