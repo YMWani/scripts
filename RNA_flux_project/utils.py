@@ -32,7 +32,6 @@ def check_sequence_validity(sequence):
         print("ERROR: Invalid sequence entered.")
         exit()
 
-
 def mutate_sequence(sequence, probability):
     """
     This function takes a protein sequence and a probability,
@@ -68,7 +67,6 @@ def mutate_sequence(sequence, probability):
             mutated_sequence += amino_acid
 
     return mutated_sequence
-
 
 def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     """
@@ -176,7 +174,6 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     
     out.close()
 
-
 def parse_density_profile_file(filename):
     """
     This function reads the density profile file created from LAMMPS simulations using the 
@@ -216,7 +213,6 @@ def parse_density_profile_file(filename):
     timesteps = np.array(timesteps)
     densities = np.array(densities)
     return timesteps, densities
-
 
 def parse_density_profile_file_2(filename):
     """
@@ -258,7 +254,6 @@ def parse_density_profile_file_2(filename):
     densities = np.array(densities)
     return timesteps, densities
 
-
 def compute_averaged_density_profile(density_prof):
     """
     This function takes the raw density profile extracted from the LAMMPS density profile file
@@ -286,7 +281,6 @@ def compute_averaged_density_profile(density_prof):
     bins[bins < 0] += 1.0
     
     return bins, bin_density
-
 
 def compute_averaged_density_profile_2(density_prof):
     """
@@ -318,7 +312,6 @@ def compute_averaged_density_profile_2(density_prof):
     
     return bins, bin_density_mass, bin_density_number
 
-
 def compute_COM_positions_multiple_chains(positions, mass):
     """
     Compute the COM positions of chains at a given timestep.
@@ -345,7 +338,6 @@ def compute_COM_positions_multiple_chains(positions, mass):
 
     return com_positions
 
-
 def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
     """
     Evaluate fitness of a multiphasic condensate.
@@ -361,7 +353,6 @@ def evaluate_fitness(rhoA_center, rhoB_center, rhoA_vapour, rhoB_vapour, s):
     - fitness (float)
     """
     return abs(rhoA_center - rhoB_center) - s*(rhoA_vapour + rhoB_vapour)
-
 
 def generate_children(N_tour, num_parents, population):
     """
@@ -411,7 +402,6 @@ def generate_children(N_tour, num_parents, population):
     
     return children
 
-
 def compute_SCD(seq):
     """
     Compute sequence charge decoration parameter for a given sequence
@@ -433,7 +423,6 @@ def compute_SCD(seq):
     SCD /= N
     
     return SCD
-
 
 def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5000):
     """
@@ -506,7 +495,6 @@ def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5
         iterations += 1
 
     return ''.join(sequence), current_nscd
-
 
 def determine_correct_atom_id_sequence(atom_ids, bond_data):
     """
@@ -600,7 +588,6 @@ def extract_sequence_composition(seq):
             "positive_with_pi": positive_with_pi/Nm, 
             "aromatic": aromatic/Nm}
 
-
 def write_slab_config(file_name,
                       required_box_bounds,
                       protein_coords, 
@@ -659,7 +646,6 @@ def write_slab_config(file_name,
     # Close file
     configFile.close()    
 
-
 def gen_seq_based_cavity(seq, diameter, subDiv=4):
     """
     construct a spherical cavity of a given diameter based on the discrete particle model such that
@@ -705,7 +691,6 @@ def gen_seq_based_cavity(seq, diameter, subDiv=4):
 
     # We exclude the last element since the particle is at the center of the cavity
     return shape.verts[:-1], atom_types[:-1]
-
 
 def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, protein_coords=None,
                         protein_bond_data=None, num_atom_types = 40):
@@ -810,7 +795,6 @@ def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, pr
     
     # Close file
     configFile.close()
-
 
 def write_cavity_with_protein1and2_config(simBox,
                                           cavity_inner_prot_coords, cavity_inner_protein_bond_data, cavity_inner_protein_highest_molid,
@@ -926,7 +910,6 @@ def write_cavity_with_protein1and2_config(simBox,
     # Close file
     configFile.close()
 
-
 def write_single_chain_config(sequence, outfile="config.dat"):
     """
     Create a single chain LAMMPS config file for a given sequence
@@ -998,7 +981,6 @@ def write_single_chain_config(sequence, outfile="config.dat"):
     
     out.close()
 
-
 def generate_cuboid_cavity(seq, xw, yw, zw):
     """
     Construct a cuboidal shaped cavity where the surfaces along the xy plane are decorated with surface
@@ -1062,7 +1044,7 @@ def generate_cuboid_cavity(seq, xw, yw, zw):
 
 def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_types,
                                                protein_coords, protein_bond_data,
-                                               num_atom_types = 40):
+                                               num_atom_types = 60):
     """
     Creates a config file for a slab containing a cuboid shaped cavity at the centre of the
     slab that is surrounded by given protein chains.
@@ -1083,10 +1065,10 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
         aa_dict = json.load(f)
     
     configFile = open('config_cuboid_cavity_with_inner_prot.dat','w')
-    configFile.write('LAMMPS data file with cuboidal cavity to hold RNA chains\n\n')
+    configFile.write('LAMMPS data file with cuboidal cavity to hold guest chains\n\n')
 
     # Overall data
-    num_atoms = cavity_positions.shape[0] + 2*len(protein_coords)
+    num_atoms = cavity_positions.shape[0] + 2*len(protein_coords) # We place the protein condensate on either side of the cavity
     configFile.write(f'{num_atoms} atoms\n')
     configFile.write(f'{num_atom_types} atom types\n')
     
@@ -1107,6 +1089,9 @@ def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_
     # Second, assign ids and masses for Amino acids for cavity monomers 
     for key, value in aa_dict.items():
         configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+    # Third, assign ids and masses for Amino acids for guest chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+40} {value.get('mass')}\n")
 
     # Particle positions
     configFile.write('\nAtoms\n\n')
@@ -1556,7 +1541,6 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
             bond_data.append((bond_id_counter, bond_type, first_atom_id, second_atom_id))
 
     return position_data, bond_data
-
 
 def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_bond_data,
                                   cavity_centre_wrapped, cavity_dimensions, seq, nchains,
@@ -2238,6 +2222,7 @@ def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_
     # Close file
     configFile.close()    
 
+# ........... Function required for setting up flux simulations .......................
 
 
 if __name__ == "__main__":
