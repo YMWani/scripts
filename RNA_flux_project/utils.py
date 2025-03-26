@@ -2126,6 +2126,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
 
                 # Check for overlaps with existing and new chain monomers
                 chain_wrapped = wrap_positions(np.array(chain), box_bounds) # We need to wrap the chain before checking for overlaps
+                print(chain, chain_wrapped)
                 all_positions = np.vstack([existing_positions, chain_wrapped])
                 if np.all(np.linalg.norm(all_positions - new_monomer_wrapped, axis=1) >= overlap_cutoff):
                     chain.append(new_monomer)
