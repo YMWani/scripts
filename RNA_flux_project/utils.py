@@ -2125,11 +2125,11 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                 all_positions = np.vstack([existing_positions, chain_wrapped])
                 if np.all(np.linalg.norm(all_positions - new_monomer_wrapped, axis=1) >= overlap_cutoff):
                     chain.append(new_monomer)
+                    print(chain)
                     monomer_added = True
                     break
             
             if not monomer_added:
-                print("Failed to add monomer, restart the chain insertion")
                 break  # Failed to add monomer, restart the chain insertion
         
         if len(chain) == monomers_per_chain:
