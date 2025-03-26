@@ -2105,6 +2105,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                 continue
         
         chain = [start_position] # unwrapped coordinates
+        print(chain)
         
         for __ in range(monomers_per_chain - 1):
             monomer_added = False
