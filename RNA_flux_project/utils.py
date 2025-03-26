@@ -2008,9 +2008,6 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     # compute second derivative
     first_derivative = np.gradient(fitted_profile)
     second_derivative = np.gradient(first_derivative)
-    plt.plot(first_derivative)
-    plt.plot(second_derivative)
-    plt.show()
     # binarize normalized second derivatives with derivative threshold and get interfaces
     threshold = derivative_threshold # units: (density per length per length) / length
     binarized = [abs(x)/max(fitted_profile) <= threshold for x in second_derivative]
@@ -2040,7 +2037,7 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     else:
         left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
     
-    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
+    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile, first_derivative, second_derivative
 
 def extract_particle_masses(types):
     """
