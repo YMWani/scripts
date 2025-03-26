@@ -2010,8 +2010,8 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     first_derivative = np.gradient(fitted_profile, fine_coords)
 
     # Find minima and maxima of the first derivative
-    left_interface_coord = fine_coords[np.argmin(first_derivative)]
-    right_interface_coord = fine_coords[np.argmax(first_derivative)]
+    left_interface_coord = fine_coords[np.argmax(first_derivative)]
+    right_interface_coord = fine_coords[np.argmin(first_derivative)]
 
     return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
     
