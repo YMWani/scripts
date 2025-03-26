@@ -2005,39 +2005,16 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     P = 2*np.round(p)
     fine_coords = np.linspace(min(coords), max(coords), num=1000)
     fitted_profile = super_gaussian(fine_coords, *popt)
-    # compute second derivative
-    first_derivative = np.gradient(fitted_profile)
-    second_derivative = np.gradient(first_derivative)
-    # binarize normalized second derivatives with derivative threshold and get interfaces
-    threshold = derivative_threshold # units: (density per length per length) / length
-    binarized = [abs(x)/max(fitted_profile) <= threshold for x in second_derivative]
-    num_clusters = 1
-    ## keep track of "True" cluster boundaries for plotting
-    true_cluster_boundaries = []
-    curr_cluster = [0] if binarized[0] else []
-    for idx in range(1, len(binarized)):
-        if binarized[idx] != binarized[idx-1]:
-            num_clusters += 1
-            if binarized[idx]:
-                curr_cluster.append(fine_coords[idx])
-            else:
-                curr_cluster.append(fine_coords[idx-1])
-                true_cluster_boundaries.append(curr_cluster)
-                curr_cluster = []
-    if len(curr_cluster) == 1: # ends on True cluster that doesn't get closed in loop, which will be common
-        curr_cluster.append(fine_coords[-1])
-        true_cluster_boundaries.append(curr_cluster)
-    num_clusters += 1
-    num_clusters /= 2
-    if binarized[0]==True and binarized[-1]==True and num_clusters == 5: # clean condensate; zero second derivative on ends, slope up/down and the middle
-        left_interface_coord = fine_coords[round(([idx for idx in range(1, len(binarized)) if binarized[idx] == False and binarized[idx-1] == True][1] + [idx for idx in range(1, len(binarized)) if binarized[idx] == True and binarized[idx-1] == False][0])/2)]
-        right_interface_coord = fine_coords[round(([idx for idx in list(reversed(range(0, len(binarized)-2))) if binarized[idx] == False and binarized[idx+1] == True][1] + [idx for idx in list(reversed(range(0, len(binarized)-2))) if binarized[idx] == True and binarized[idx+1] == False][0])/2)]
-        if (left_interface_coord + (max(fine_coords)-right_interface_coord)) <= min_dilute_size_multiplier * right_interface_coord - left_interface_coord: # ensure dilute phase isn't too small
-            left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
-    else:
-        left_interface_coord, right_interface_coord = np.percentile(coords, percentile_low), np.percentile(coords, percentile_high)
     
-    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile, first_derivative, second_derivative
+    # Compute first derivative
+    first_derivative = np.gradient(fitted_profile, fine_coords)
+
+    # Find minima and maxima of the first derivative
+    left_interface_coord = fine_coords[np.argmin(first_derivative)]
+    right_interface_coord = fine_coords[np.argmax(first_derivative)]
+
+    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
+    
 
 def extract_particle_masses(types):
     """
