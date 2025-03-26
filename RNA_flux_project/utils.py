@@ -2106,6 +2106,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
         chain = [start_position] # unwrapped coordinates
         
         for __ in range(monomers_per_chain - 1):
+            print(__)
             monomer_added = False
             
             np.random.shuffle(directions)  # Randomize direction order
@@ -2125,7 +2126,6 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                 all_positions = np.vstack([existing_positions, chain_wrapped])
                 if np.all(np.linalg.norm(all_positions - new_monomer_wrapped, axis=1) >= overlap_cutoff):
                     chain.append(new_monomer)
-                    print(len(chain))
                     monomer_added = True
                     break
             
