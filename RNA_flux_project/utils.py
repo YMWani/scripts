@@ -2101,10 +2101,10 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
         # Check if the starting position overlaps with existing particles
         if len(existing_positions) > 0:
             if np.any(np.linalg.norm(existing_positions - start_position, axis=1) < overlap_cutoff):
-                print("overlap")
                 continue
         
         chain = [start_position] # unwrapped coordinates
+        print(chain)
         
         for __ in range(monomers_per_chain - 1):
             monomer_added = False
