@@ -2066,7 +2066,8 @@ def compute_COM_position(positions, mass):
     return com_position
 
 def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per_chain, 
-                                    lattice_spacing, overlap_cutoff, max_chain_tries):
+                                    lattice_spacing, overlap_cutoff, simulation_box,
+                                    max_chain_tries):
     """
     Attempts to add a single polymer chain to a simulation box using Monte Carlo insertions.
     
@@ -2105,7 +2106,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                 continue
         
         chain = [start_position] # unwrapped coordinates
-        print(chain)
+        print(f"Start of the chain:", chain)
 
         for __ in range(monomers_per_chain - 1):
             monomer_added = False
@@ -2114,23 +2115,25 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
 
             for displacement in directions:
                 new_monomer = chain[-1] + displacement
-                
+                print("Try displacement:", displacement)
+                print("New monomer:", new_monomer)
+
                 # Apply periodic boundary conditions
                 new_monomer_wrapped = np.array([
                     (new_monomer[0] - x_min) % (x_max - x_min) + x_min,
                     (new_monomer[1] - y_min) % (y_max - y_min) + y_min,
                     new_monomer[2]
                 ])
-
-                print(new_monomer, new_monomer_wrapped)
-
+                print("New monomer wrapped:", new_monomer_wrapped)
+                
                 # Check for overlaps with existing and new chain monomers
-                chain_wrapped = wrap_positions(np.array(chain), box_bounds) # We need to wrap the chain before checking for overlaps
-                print(chain, chain_wrapped)
+                chain_wrapped = wrap_positions(np.array(chain), simulation_box) # We need to wrap the chain before checking for overlaps
+                print("Chain unwrapped:", chain)
+                print("Chain wrapped:", chain_wrapped)
                 all_positions = np.vstack([existing_positions, chain_wrapped])
                 if np.all(np.linalg.norm(all_positions - new_monomer_wrapped, axis=1) >= overlap_cutoff):
                     chain.append(new_monomer)
-                    print(len(chain), new_monomer, new_monomer_wrapped)
+                    print("Added new monomer.", chain)
                     monomer_added = True
                     break
             
