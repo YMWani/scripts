@@ -2014,7 +2014,6 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     right_interface_coord = fine_coords[np.argmin(first_derivative)]
 
     return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
-    
 
 def extract_particle_masses(types):
     """
@@ -2090,6 +2089,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
     z_min, z_max = box_bounds[2]
     
     for _ in range(max_chain_tries):
+        print(_)
         # Start with a random position within the simulation box bounds
         # NOTE: Cavity should not have a periodic boundary in the z direction. But I still keep it here
         # since the overlap with cavity monomers should do the job of eleminating the periodic boundary issue.
