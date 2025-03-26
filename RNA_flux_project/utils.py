@@ -2114,6 +2114,8 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
             for displacement in directions:
                 new_monomer = chain[-1] + displacement
                 
+                print(new_monomer)
+
                 # Apply periodic boundary conditions
                 new_monomer_wrapped = np.array([
                     (new_monomer[0] - x_min) % (x_max - x_min) + x_min,
