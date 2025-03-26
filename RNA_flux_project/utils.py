@@ -2088,8 +2088,10 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
     y_min, y_max = box_bounds[1]
     z_min, z_max = box_bounds[2]
     
+    print(x_min, x_max, y_min, y_max, z_min, z_max)
+    exit()
+
     for _ in range(max_chain_tries):
-        print(_)
         # Start with a random position within the simulation box bounds
         # NOTE: Cavity should not have a periodic boundary in the z direction. But I still keep it here
         # since the overlap with cavity monomers should do the job of eleminating the periodic boundary issue.
