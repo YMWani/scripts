@@ -496,53 +496,6 @@ def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5
 
     return ''.join(sequence), current_nscd
 
-def determine_correct_atom_id_sequence(atom_ids, bond_data):
-    """
-    Determine the correct sequence of atoms in a linear chain.
-    
-    Parameters:
-    - atom_ids: List of atom IDs belonging to the chain
-    - bond_data: List of [atom1, atom2] pairs representing bonds
-    
-    Returns:
-    - ordered_atoms: List of atom IDs in the correct sequential order
-    """
-    # Create a dictionary to store connections
-    connections = {}
-    for atom1, atom2 in bond_data:
-        if atom1 not in connections:
-            connections[atom1] = []
-        if atom2 not in connections:
-            connections[atom2] = []
-        connections[atom1].append(atom2)
-        connections[atom2].append(atom1)
-    
-    # Find terminal atoms (atoms with only one connection)
-    terminal_atoms = [atom for atom in atom_ids if len(connections.get(atom, [])) == 1]
-    
-    # If we don't have exactly 2 terminal atoms, something is wrong
-    if len(terminal_atoms) != 2:
-        raise ValueError("Expected a linear chain with 2 terminal atoms, found " + 
-                         str(len(terminal_atoms)))
-    
-    # Start from the first terminal atom
-    current = terminal_atoms[0]
-    ordered_atoms = [int(current)]
-    visited = {current}
-    
-    # Follow the chain until we reach the other end
-    while len(ordered_atoms) < len(atom_ids):
-        # Get the next atom in the chain
-        for neighbor in connections[current]:
-            if neighbor not in visited:
-                current = neighbor
-                ordered_atoms.append(int(current))
-                visited.add(current)
-                break
-    
-    ordered_atoms = np.array(ordered_atoms)
-    
-    return ordered_atoms
 
 def extract_sequence_composition(seq):
     """
@@ -2201,6 +2154,54 @@ def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_
     
     # Close file
     configFile.close()    
+
+def determine_correct_atom_id_sequence(atom_ids, bond_data):
+    """
+    Determine the correct sequence of atoms in a linear chain.
+    
+    Parameters:
+    - atom_ids: List of atom IDs belonging to the chain
+    - bond_data: List of [atom1, atom2] pairs representing bonds
+    
+    Returns:
+    - ordered_atoms: List of atom IDs in the correct sequential order
+    """
+    # Create a dictionary to store connections
+    connections = {}
+    for atom1, atom2 in bond_data:
+        if atom1 not in connections:
+            connections[atom1] = []
+        if atom2 not in connections:
+            connections[atom2] = []
+        connections[atom1].append(atom2)
+        connections[atom2].append(atom1)
+    
+    # Find terminal atoms (atoms with only one connection)
+    terminal_atoms = [atom for atom in atom_ids if len(connections.get(atom, [])) == 1]
+    
+    # If we don't have exactly 2 terminal atoms, something is wrong
+    if len(terminal_atoms) != 2:
+        raise ValueError("Expected a linear chain with 2 terminal atoms, found " + 
+                         str(len(terminal_atoms)))
+    
+    # Start from the first terminal atom
+    current = terminal_atoms[0]
+    ordered_atoms = [int(current)]
+    visited = {current}
+    
+    # Follow the chain until we reach the other end
+    while len(ordered_atoms) < len(atom_ids):
+        # Get the next atom in the chain
+        for neighbor in connections[current]:
+            if neighbor not in visited:
+                current = neighbor
+                ordered_atoms.append(int(current))
+                visited.add(current)
+                break
+    
+    ordered_atoms = np.array(ordered_atoms)
+    
+    return ordered_atoms
 
 # ........... Function required for setting up flux simulations .......................
 
