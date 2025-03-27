@@ -496,7 +496,6 @@ def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5
 
     return ''.join(sequence), current_nscd
 
-
 def extract_sequence_composition(seq):
     """
     Extract the AA coposition of a given sequence. The properties extracted are:
@@ -1401,7 +1400,7 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     - bond_data (list of tuples): (bond_id, bond_type, atom_id_1, atom_id_2)
     """
     r0 = 3.81 # equilibrium bond length (Angstroms)
-    seq_length = len(seq)*r0 + 10.0 # Approximate excluded length of chain with buffer
+    seq_length = len(seq)*r0 + 8.0 # Approximate excluded length of chain with buffer
     Lx = box_bounds[0][1] - box_bounds[0][0]
     nx = int(Lx//seq_length)
     Ly = box_bounds[1][1] - box_bounds[1][0]
