@@ -1520,9 +1520,9 @@ def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_b
     
     # Based on cavity coordinates, first determine the position and bond data of the peptides
     # that go inside the cavity
-    cavity_box = [[cavity_dimensions[0][0] + 10., cavity_dimensions[0][1] - 10.],
-                  [cavity_dimensions[1][0] + 10., cavity_dimensions[1][1] - 10.],
-                  [cavity_dimensions[2][0] + 10., cavity_dimensions[2][1] - 10.]]
+    cavity_box = [[cavity_dimensions[0][0] + 1., cavity_dimensions[0][1] - 1.],
+                  [cavity_dimensions[1][0] + 1., cavity_dimensions[1][1] - 1.],
+                  [cavity_dimensions[2][0] + 1., cavity_dimensions[2][1] - 1.]]
     cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
                                                         seq, cavity_box, nchains)
 
