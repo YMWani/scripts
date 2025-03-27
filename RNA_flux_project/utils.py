@@ -1401,7 +1401,6 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     """
     r0 = 3.81 # equilibrium bond length (Angstroms)
     seq_length = len(seq)*r0 + 1.0 # Approximate excluded length of chain with buffer
-    print("Sequence length: ", seq_length)
     Lx = box_bounds[0][1] - box_bounds[0][0]
     nx = int(Lx//seq_length)
     Ly = box_bounds[1][1] - box_bounds[1][0]
@@ -1409,8 +1408,6 @@ def place_chains_in_confinement(seq, box_bounds, nchains):
     Lz = box_bounds[2][1] - box_bounds[2][0]
     nz = int(Lz//seq_length)
     buffer = 5.0 # buffer distance between chains
-    print("Lx, Ly, Lz: ", Lx, Ly, Lz)
-    print("nx, ny, nz:", nx, ny, nz)
     box_origin = [box_bounds[0][0], box_bounds[1][0], box_bounds[2][0]]
     # Extend chains along x direction if the x dimension is largest
     lattice_points = []
