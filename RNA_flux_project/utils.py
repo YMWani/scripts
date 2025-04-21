@@ -2088,7 +2088,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                 break  # Failed to add monomer, restart the chain insertion
         
         if len(chain) == monomers_per_chain:
-            print("Successfully added a chain.")
+            # print("Successfully added a chain.")
             return chain  # Return the newly added chain's positions
     
     print("Failed to insert a polymer chain after max attempts.")
