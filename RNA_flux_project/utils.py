@@ -2076,7 +2076,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
         
         # Check if the starting position overlaps with existing particles
         if len(existing_positions) > 0:
-            if np.any(minimum_image_distance(start_position, existing_positions, np.array([x_max-x_min, y_max-y_min, z_max-z_min])) < overlap_cutoff):
+            if np.any(minimum_image_distance(start_position, existing_positions, np.array([simulation_box[0][1]-simulation_box[0][0], simulation_box[1][1]-simulation_box[1][0], simulation_box[2][1]-simulation_box[2][0]])) < overlap_cutoff):
                 continue
         
         chain = [start_position] # unwrapped coordinates
@@ -2102,7 +2102,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                     all_positions = np.vstack([existing_positions, chain_wrapped[:-1]])
                 else:
                     all_positions = existing_positions
-                if np.all(minimum_image_distance(new_monomer_wrapped, all_positions, np.array([x_max-x_min, y_max-y_min, z_max-z_min])) >= overlap_cutoff):
+                if np.all(minimum_image_distance(new_monomer_wrapped, all_positions, np.array([simulation_box[0][1]-simulation_box[0][0], simulation_box[1][1]-simulation_box[1][0], simulation_box[2][1]-simulation_box[2][0]])) >= overlap_cutoff):
                     chain.append(new_monomer)
                     monomer_added = True
                     break
