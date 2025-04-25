@@ -2017,6 +2017,29 @@ def compute_COM_position(positions, mass):
 
     return com_position
 
+def minimum_image_distance(point, points_array, box_lengths):
+    """
+    Compute the minimum image distance between a point and an array of points.
+
+    Parameters:
+    - point (numpy array): A 1D array representing the coordinates of the point (e.g., [x, y, z]).
+    - points_array (numpy array): A 2D array where each row is a point's coordinates (e.g., [[x1, y1, z1], [x2, y2, z2], ...]).
+    - box_lengths (numpy array): A 1D array representing the lengths of the simulation box in each dimension (e.g., [Lx, Ly, Lz]).
+
+    Returns:
+    - distances (numpy array): A 1D array of minimum image distances to each point in `points_array`.
+    """
+    # Compute the displacement vectors
+    displacements = points_array - point
+
+    # Apply minimum image convention
+    displacements -= np.round(displacements / box_lengths) * box_lengths
+
+    # Compute the Euclidean distances
+    distances = np.linalg.norm(displacements, axis=1)
+
+    return distances
+
 def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per_chain, 
                                     lattice_spacing, overlap_cutoff, simulation_box,
                                     max_chain_tries):
@@ -2053,7 +2076,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
         
         # Check if the starting position overlaps with existing particles
         if len(existing_positions) > 0:
-            if np.any(np.linalg.norm(existing_positions - start_position, axis=1) < overlap_cutoff):
+            if np.any(minimum_image_distance(start_position, existing_positions, np.array([x_max-x_min, y_max-y_min, z_max-z_min])) < overlap_cutoff):
                 continue
         
         chain = [start_position] # unwrapped coordinates
@@ -2079,7 +2102,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
                     all_positions = np.vstack([existing_positions, chain_wrapped[:-1]])
                 else:
                     all_positions = existing_positions
-                if np.all(np.linalg.norm(all_positions - new_monomer_wrapped, axis=1) >= overlap_cutoff):
+                if np.all(minimum_image_distance(new_monomer_wrapped, all_positions, np.array([x_max-x_min, y_max-y_min, z_max-z_min])) >= overlap_cutoff):
                     chain.append(new_monomer)
                     monomer_added = True
                     break
