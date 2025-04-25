@@ -2061,7 +2061,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
         for __ in range(monomers_per_chain - 1):
             monomer_added = False
             
-            # np.random.shuffle(directions)  # Randomize direction order
+            np.random.shuffle(directions)  # Randomize direction order
 
             for displacement in directions:
                 new_monomer = chain[-1] + displacement
