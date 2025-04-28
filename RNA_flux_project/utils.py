@@ -2272,6 +2272,7 @@ def read_full_trajectory(file_name):
         for idx, line in enumerate(file):
             if 'ITEM: TIMESTEP' in line:
                 timesteps[counter] = int(next(file).strip())
+                print(timesteps[counter])
             
             elif 'ITEM: BOX BOUNDS' in line:
                 for i in range(3):
@@ -2282,9 +2283,9 @@ def read_full_trajectory(file_name):
                     atom_data = next(file).strip().split()
                     coords[counter, i, 0] = int(atom_data[0])
                     coords[counter, i, 1] = int(atom_data[1])
-                    coords[counter, i,2] = float(atom_data[4])
-                    coords[counter, i,3] = float(atom_data[5])
-                    coords[counter, i,4] = float(atom_data[6])
+                    coords[counter, i, 2] = float(atom_data[4])
+                    coords[counter, i, 3] = float(atom_data[5])
+                    coords[counter, i, 4] = float(atom_data[6])
                 counter += 1
             
     return box_sizes, coords, timesteps
