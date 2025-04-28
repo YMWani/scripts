@@ -2225,6 +2225,71 @@ def determine_correct_atom_id_sequence(atom_ids, bond_data):
     
     return ordered_atoms
 
+def read_all_timesteps(file_name):
+    """
+    Reads all the timesteps from a LAMMPS trajectory file.
+
+    Parameters:
+    - file_name (str): Path to the LAMMPS trajectory file.
+
+    Returns:
+    - timesteps (list): A list of all timesteps present in the file.
+    """
+    timesteps = []
+    with open(file_name, 'r') as file:
+        for line in file:
+            if "ITEM: TIMESTEP" in line:
+                timestep = int(next(file).strip())
+                timesteps.append(timestep)
+    return timesteps
+
+def read_full_trajectory(file_name):
+    """
+    Efficiently reads the last frame of a LAMMPS trajectory file to extract positions of all chains.
+    """
+    # First pass to determine the number of frames and number of atoms
+    num_frames = 0
+    num_atoms = 0
+
+    with open(file_name, 'r') as file:
+        for idx, line in enumerate(file):
+            if 'ITEM: TIMESTEP' in line:
+                num_frames += 1
+            elif 'ITEM: NUMBER OF ATOMS' in line and num_atoms == 0:
+                num_atoms = int(next(file).strip())
+    
+    print(f"Number of frames: {num_frames}")
+    print(f"Number of atoms: {num_atoms}")
+
+    # Pre-allocate arrays for the data
+    box_sizes = np.zeros((3, 2), dtype=float)
+    coords = np.zeros((num_frames, num_atoms, 5), dtype=float) # (atom number, molecule ID, x, y, z)
+    timesteps = np.zeros(num_frames, dtype=int)
+
+    # Second pass to read the last frame
+    counter = 0
+    with open(file_name, 'r') as file:
+        for idx, line in enumerate(file):
+            if 'ITEM: TIMESTEP' in line:
+                timesteps[counter] = int(next(file).strip())
+            
+            elif 'ITEM: BOX BOUNDS' in line:
+                for i in range(3):
+                    box_sizes[i] = list(map(float, next(file).strip().split()))
+            
+            elif 'ITEM: ATOMS' in line:
+                for i in range(num_atoms):
+                    atom_data = next(file).strip().split()
+                    coords[counter, i, 0] = int(atom_data[0])
+                    coords[counter, i, 1] = int(atom_data[1])
+                    coords[counter, i,2] = float(atom_data[4])
+                    coords[counter, i,3] = float(atom_data[5])
+                    coords[counter, i,4] = float(atom_data[6])
+                counter += 1
+            
+    return box_sizes, coords, timesteps
+
+
 # ........... Function required for setting up flux simulations .......................
 
 
@@ -2351,3 +2416,9 @@ if __name__ == "__main__":
 
     # seq, final_nscd = gen_EK_sequence_Monte_carlo(N=10, target_nSCD=0.9, tolerance=0.05)
     # print(seq, final_nscd)
+
+    # file_path = "/Users/yw9071_admin/Downloads/guest_chains.lammpstrj"
+    # box, coords, tsteps = read_full_trajectory(file_path)
+    # print(box)
+    # print(coords.shape)
+    # print(tsteps.shape)
