@@ -2272,7 +2272,6 @@ def read_full_trajectory(file_name):
         for idx, line in enumerate(file):
             if 'ITEM: TIMESTEP' in line:
                 timesteps[counter] = int(next(file).strip())
-                print(timesteps[counter])
             
             elif 'ITEM: BOX BOUNDS' in line:
                 for i in range(3):
@@ -2420,6 +2419,3 @@ if __name__ == "__main__":
 
     # file_path = "/Users/yw9071_admin/Downloads/guest_chains.lammpstrj"
     # box, coords, tsteps = read_full_trajectory(file_path)
-    # print(box)
-    # print(coords.shape)
-    # print(tsteps.shape)
