@@ -1936,8 +1936,13 @@ def compute_number_density_profile(positions, simBox, bin_width):
 def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
     """
     This function takes averaged density profile for a direct coexistence simulations
-    and fits a super gaussian function to the profile. From the second derivative of the 
+    and fits a super gaussian function to the profile. From the derivative of the 
     super gaussian one can extract the interface coordinates of the slab.
+
+    In addition, here we also pass a gaussian filter to weight the data points
+    since the dilute phase is large and therefore can indirectly give more weight to the
+    dilute phase.
+    NOTE: HERE I ASSUME THAT THE DENSE PHASE IS IN THE CENTER OF THE SLAB.
 
     Parameters:
     - coords (array): bin_centers of the density profile
@@ -1949,10 +1954,18 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     - fine_coords: finely spaced bin centers
     - fitted_profile: Fitted profile on the finely spaced bin centers
     """
+    x0 = np.mean(coords)
+    sigma_weight = (np.max(coords) - np.min(coords)) / 4 # Adjust to control weighting width
+    # Gaussian weights (higher at center, lower at terminals)
+    weights = np.exp(-(coords - x0)**2 / (2 * sigma_weight**2))
+    sigma_ = 1 / weights  # Terminal regions now have higher sigma (lower weight)
+    sigma_ = np.clip(sigma_, 1e-8, None)  # Avoid division by zero
+
     # fit super gaussian
     super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
     initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
-    popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess, maxfev=10000)
+    popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
+                           sigma=sigma_, absolute_sigma=True, maxfev=10000)
     A, x0, sigma, p = popt
     P = 2*np.round(p)
     fine_coords = np.linspace(min(coords), max(coords), num=1000)
