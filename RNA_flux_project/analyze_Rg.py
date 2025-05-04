@@ -8,7 +8,7 @@ from scipy.stats import sem
 import json
 from matplotlib.cm import viridis
 current_dir = pathlib.Path(__file__).resolve().parent
-plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
+plt.style.use(f"{current_dir}/../plotting/joseph_group.mplstyle")
 import argparse
 
 """
