@@ -196,7 +196,7 @@ def compute_gyration_tensor(com_pos, atom_positions, chain_masses):
     Rg^2 = a1+a2+a3
     
     Asphericity:
-    b = a3 - 0.5*(a1+a2)
+    b = [a3 - 0.5*(a1+a2)] / (a1+a2+a3)
 
     Arguments:
     - com_pos (numpy array): [#chains, 3]
@@ -209,16 +209,14 @@ def compute_gyration_tensor(com_pos, atom_positions, chain_masses):
     nchains = com_pos.shape[0] # number of chains
     Rgs = np.zeros(nchains) # Create empty array for storing radius of gyrations
     asphericities = np.zeros(nchains) # Create empty array for storing apshericity of the chains
+    total_chain_mass = np.sum(chain_masses)
     for i in range(nchains):
         relative_pos = atom_positions[i] - com_pos[i] # shape: [#atoms-per-chain, 3]
-        print(relative_pos)
-        print(np.repeat(chain_masses,3).reshape((-1,3))*relative_pos)
-        exit()
-        gyration_tensor = np.einsum("jm,jn->mn", chain_masses*relative_pos, relative_pos)/relative_pos.shape[0]
+        gyration_tensor = np.einsum("jm,jn->mn", np.repeat(chain_masses,3).reshape((-1,3))*relative_pos, relative_pos)/total_chain_mass
         eig_vals, eig_vecs = np.linalg.eig(gyration_tensor)
         eig_vals_sorted = np.sort(eig_vals)
         Rgs[i] = np.sqrt(np.sum(eig_vals))
-        asphericities[i] = eig_vals_sorted[2] - 0.5*(eig_vals_sorted[0]+eig_vals_sorted[1])
+        asphericities[i] = (eig_vals_sorted[2] - 0.5*(eig_vals_sorted[0]+eig_vals_sorted[1]))/(np.sum(eig_vals))
     return Rgs, asphericities
 
 
