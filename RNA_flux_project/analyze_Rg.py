@@ -180,7 +180,7 @@ def wrap_positions_inside_sim_box(positions, simBox):
             r[2] -= np.floor(r[2]/Lz)*Lz
     return positions
     
-def compute_gyration_tensor(com_pos, atom_positions):
+def compute_gyration_tensor(com_pos, atom_positions, chain_masses):
     """
     For a given set of chains, this function computes the radius of gyration of the chains
     by first computing the gyration tensor and its eigenvalues.
@@ -201,6 +201,7 @@ def compute_gyration_tensor(com_pos, atom_positions):
     Arguments:
     - com_pos (numpy array): [#chains, 3]
     - atom_positions (numpy array): [#chains, #atoms-per-chain, 3]
+    - chain_masses (numpy array): [#atoms-per-chain,]
 
     Returns:
     - Rgs (numpy array): [#chains,]
@@ -210,7 +211,10 @@ def compute_gyration_tensor(com_pos, atom_positions):
     asphericities = np.zeros(nchains) # Create empty array for storing apshericity of the chains
     for i in range(nchains):
         relative_pos = atom_positions[i] - com_pos[i] # shape: [#atoms-per-chain, 3]
-        gyration_tensor = np.einsum("jm,jn->mn", relative_pos, relative_pos)/relative_pos.shape[0]
+        print(relative_pos)
+        print(chain_masses*relative_pos)
+        exit()
+        gyration_tensor = np.einsum("jm,jn->mn", chain_masses*relative_pos, relative_pos)/relative_pos.shape[0]
         eig_vals, eig_vecs = np.linalg.eig(gyration_tensor)
         eig_vals_sorted = np.sort(eig_vals)
         Rgs[i] = np.sqrt(np.sum(eig_vals))
@@ -242,8 +246,6 @@ if __name__=="__main__":
                                           atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
     # Get the mass of chain monomers using particle types
     chain_masses = extract_particle_masses(atom_types)
-    print(chain_masses)
-    exit()
     # Compute center of mass positions of the chains at every timestep
     # NOTE: Particle positions correspond to unwrapped positions.
     print(f"Computing COM positions of the guest chains.")
@@ -255,7 +257,7 @@ if __name__=="__main__":
     radius_gyration = []
     asphericities = []
     for idx in tqdm(range(COM_positions.shape[0])):
-        Rgs, aspheris = compute_gyration_tensor(COM_positions[idx], atom_positions_reshaped[idx])
+        Rgs, aspheris = compute_gyration_tensor(COM_positions[idx], atom_positions_reshaped[idx], chain_masses)
         radius_gyration.append(Rgs)
         asphericities.append(aspheris)
     radius_gyration = np.array(radius_gyration)
