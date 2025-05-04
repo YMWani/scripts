@@ -210,7 +210,7 @@ def compute_gyration_tensor(com_pos, atom_positions):
     asphericities = np.zeros(nchains) # Create empty array for storing apshericity of the chains
     for i in range(nchains):
         relative_pos = atom_positions[i] - com_pos[i] # shape: [#atoms-per-chain, 3]
-        gyration_tensor = np.einsum("im,in->mn", relative_pos, relative_pos)/relative_pos.shape[0]
+        gyration_tensor = np.einsum("jm,jn->mn", relative_pos, relative_pos)/relative_pos.shape[0]
         eig_vals, eig_vecs = np.linalg.eig(gyration_tensor)
         eig_vals_sorted = np.sort(eig_vals)
         Rgs[i] = np.sqrt(np.sum(eig_vals))
@@ -232,6 +232,7 @@ if __name__=="__main__":
     print(f"Trajectory file details:")
     print(f"# frames   :{len(timesteps)}")
     print(f"# particles:{num_atoms}")
+    print(f"Atom types: {atom_types}")
     
     # Reshape position array to separate each chain
     atom_positions_reshaped = np.reshape(atom_positions,
@@ -241,6 +242,8 @@ if __name__=="__main__":
                                           atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
     # Get the mass of chain monomers using particle types
     chain_masses = extract_particle_masses(atom_types)
+    print(chain_masses)
+    exit()
     # Compute center of mass positions of the chains at every timestep
     # NOTE: Particle positions correspond to unwrapped positions.
     print(f"Computing COM positions of the guest chains.")
