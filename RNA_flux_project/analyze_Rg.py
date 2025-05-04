@@ -275,6 +275,11 @@ if __name__=="__main__":
     bin_indices = (np.digitize(COM_wrapped[:,:,2], bin_edges) - 1).reshape((-1,))
     radius_gyration_reshaped = radius_gyration.reshape((-1,))
     asphericities_reshaped = asphericities.reshape((-1,))
+    
+    print(bin_indices.shape)
+    print(radius_gyration.shape)
+    print(radius_gyration_reshaped.shape)
+    
     Rg_binned = np.zeros((nbins,3))
     asphericity_binned = np.zeros((nbins,3))
     for idx in range(nbins):
