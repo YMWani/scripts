@@ -180,13 +180,25 @@ if __name__=="__main__":
 
     # Determine the unique mol. ids
     unique_mol_ids = np.unique(mol_ids)
-    
-    # Iterate through each unique mol. id. and extract the trajectory of the guest chain
-    for umolid in tqdm(unique_mol_ids):
-        # Extract the trajectory of the guest chain
-        mask = (mol_ids == umolid)
-        
-        guest_chain_traj = atom_positions[mask]
 
-        print(guest_chain_traj)
-        exit()
+    # Determine the COM trajectory of the guest chains
+    print(f"\nComputing COM positions of the guest chains")
+    # Reshape position array to separate each chain
+    atom_positions_reshaped = np.reshape(atom_positions,
+                                         (atom_positions.shape[0],
+                                          atom_positions.shape[1]//Nm,
+                                          Nm,
+                                          atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
+
+    print(atom_positions_reshaped.shape)
+    print(atom_positions.shape)
+    
+    # # Iterate through each unique mol. id. and extract the trajectory of the guest chain
+    # for umolid in tqdm(unique_mol_ids):
+    #     # Extract the trajectory of the guest chain
+    #     mask = (mol_ids == umolid)
+        
+    #     # Extract the trajectory of the guest chain
+    #     guest_chain_traj = atom_positions[mask]
+
+    #     # Compute the center of mass 
