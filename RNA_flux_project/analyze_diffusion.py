@@ -193,9 +193,10 @@ if __name__=="__main__":
 
     print(f"Extracting data from trajectory file.")
     timesteps, box_sizes, num_atoms, atom_positions, atom_types, mol_ids = read_lammps_trajectory(f"{file_path}/{traj}", Nm)
+    numFrames = len(timesteps)
 
     print(f"\nTrajectory file details:")
-    print(f"# frames   :{len(timesteps)}")
+    print(f"# frames   :{numFrames}")
     print(f"# particles:{num_atoms}")
     print(f"Number of chains:{num_atoms//Nm}")
 
@@ -220,6 +221,6 @@ if __name__=="__main__":
         chain_traj = com_positions[:,i,:] # [#frames, 3]
 
         # Determine the timesteps at which the guest chain is in the cavity
-        mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0)
+        mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0) # TRUE: Inside cavity; FALSE: Outside cavity
 
-        print(mask.sum())
+        print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames}% of the time")
