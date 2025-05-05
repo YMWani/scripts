@@ -191,8 +191,10 @@ if __name__=="__main__":
                                           atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
 
     print(atom_positions_reshaped.shape)
-    print(atom_positions.shape)
     
+    print(atom_positions_reshaped[0,0])
+    print(atom_positions_reshaped[0,1])
+
     # # Iterate through each unique mol. id. and extract the trajectory of the guest chain
     # for umolid in tqdm(unique_mol_ids):
     #     # Extract the trajectory of the guest chain
