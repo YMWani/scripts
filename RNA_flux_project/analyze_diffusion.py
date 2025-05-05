@@ -58,7 +58,7 @@ def read_lammps_trajectory(file_path, chain_length):
         while line:
             if 'ITEM: TIMESTEP' in line:
                 timestep = int(file.readline().strip())
-                print(timestep)
+                # print(timestep)
                 timesteps.append(timestep)
             
             elif 'ITEM: NUMBER OF ATOMS' in line:
@@ -181,4 +181,5 @@ if __name__=="__main__":
     # Determine the unique mol. ids
     unique_mol_ids = np.unique(mol_ids)
     
+    print(mol_ids.shape)
     
