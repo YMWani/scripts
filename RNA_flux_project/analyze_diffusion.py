@@ -217,8 +217,9 @@ if __name__=="__main__":
 
     for i in range(com_positions.shape[1]):
         print(f"Analyzing chain {i+1}")
-        chain_traj = com_positions[:,i,:]
+        chain_traj = com_positions[:,i,:] # [#frames, 3]
 
         # Determine the timesteps at which the guest chain is in the cavity
-        mask = (chain_traj[:,2] > 950.0) & (chain_traj[:,2] < 1050.0)
-        print(mask)
+        mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0)
+
+        print(mask.sum())
