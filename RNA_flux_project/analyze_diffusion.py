@@ -227,5 +227,5 @@ if __name__=="__main__":
         print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
 
         diff = mask_int[:-1] - mask_int[1:]
-        print(diff)
+        print(np.where(diff == -1)[0])
         exit()
