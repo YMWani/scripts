@@ -229,6 +229,6 @@ if __name__=="__main__":
 
         diff = mask_int[:-1] - mask_int[1:]
         indices = np.where(diff == -1)[0]
-        print(indices[:-1] - indices[1:])
+        print(indices[1:] - indices[:-1])
 
         exit()
