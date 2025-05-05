@@ -199,9 +199,6 @@ if __name__=="__main__":
     print(f"# particles:{num_atoms}")
     print(f"Number of chains:{num_atoms//Nm}")
 
-    # Determine the unique mol. ids
-    unique_mol_ids = np.unique(mol_ids)
-
     # Determine the COM trajectory of the guest chains
     print(f"\nComputing COM positions of the guest chains")
     # Reshape position array to separate each chain
@@ -216,12 +213,7 @@ if __name__=="__main__":
     
     com_positions = compute_COM_positions(atom_positions_reshaped, chain_masses)
 
+    # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
 
-    # # Iterate through each unique mol. id. and extract the trajectory of the guest chain
-    # for umolid in tqdm(unique_mol_ids):
-    #     # Extract the trajectory of the guest chain
-    #     mask = (mol_ids == umolid)
-        
-    #     # Extract the trajectory of the guest chain COM
-    #     guest_chain_traj = atom_positions_reshaped[mask]
-
+    print(com_positions.shape)
+    # for i in range(com_positions.shape[1]):
