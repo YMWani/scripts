@@ -217,7 +217,7 @@ if __name__=="__main__":
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
 
     for i in range(com_positions.shape[1]):
-        print(f"Analyzing chain {i+1}")
+        print(f"\nAnalyzing chain {i+1}")
         chain_traj = com_positions[:,i,:] # [#frames, 3]
 
         # Determine the timesteps at which the guest chain is in the cavity
@@ -225,3 +225,6 @@ if __name__=="__main__":
 
         print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
 
+        diff = mask[:-1] - mask[1:]
+        print(diff)
+        exit()
