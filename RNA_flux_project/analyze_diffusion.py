@@ -181,5 +181,11 @@ if __name__=="__main__":
     # Determine the unique mol. ids
     unique_mol_ids = np.unique(mol_ids)
     
-    print(mol_ids.shape)
-    
+    # Iterate through each unique mol. id. and extract the trajectory of the guest chain
+    for umolid in tqdm(unique_mol_ids):
+        # Extract the trajectory of the guest chain
+        mask = (mol_ids == umolid)
+        print(mask.shape)
+        print(mask.sum())
+        exit()
+        
