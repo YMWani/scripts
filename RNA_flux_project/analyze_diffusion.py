@@ -177,6 +177,12 @@ def extract_particle_masses(types):
 
     return masses
 
+def get_mass_by_id(amino_dict, id_to_find):
+    for amino_acid, data in amino_dict.items():
+        if data['id'] == id_to_find:
+            return data['mass']
+    return None
+
 
 
 # Call functions
