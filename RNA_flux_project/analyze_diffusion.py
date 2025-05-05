@@ -39,79 +39,78 @@ def read_lammps_trajectory(file_path, chain_length):
     atom_id mol_id type q xu yu zu
     Total 7 elements. The positional data is at the 4,5,6 indices
 
-
     Output:
     - Simulation box
     - # atoms
     - Timesteps of snapshots
     - Atom positions at every timestep
     """
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
+    print(f"Reading file: {file_path}")
     timesteps = []
     box_sizes = []
     atom_positions = []
     mol_ids = []
-    atom_types = []
-    num_atoms = 0
-    current_timestep = None
-    current_box_size = None
-    current_positions = []
     current_types = []
-    current_mol_ids = []
-
-    for idx, line in enumerate(tqdm(lines)):
-        if 'ITEM: TIMESTEP' in line:
-            if current_timestep is not None:
-                timesteps.append(current_timestep)
+    
+    # Pre-allocate lists to avoid repeated resizing
+    with open(file_path, 'r') as file:
+        line = file.readline()
+        while line:
+            if 'ITEM: TIMESTEP' in line:
+                timestep = int(file.readline().strip())
+                timesteps.append(timestep)
+            
+            elif 'ITEM: NUMBER OF ATOMS' in line:
+                num_atoms = int(file.readline().strip())
+            
+            elif 'ITEM: BOX BOUNDS' in line:
+                current_box_size = []
+                for _ in range(3):  # x, y, z bounds
+                    bounds = list(map(float, file.readline().split()))
+                    current_box_size.append(bounds)
                 box_sizes.append(current_box_size)
-                atom_positions.append(np.array(current_positions))
-                mol_ids.append(np.array(current_mol_ids))
-                atom_types = np.array(current_types)
-                current_positions = []
-                current_types = []
-            current_timestep = int(lines[idx + 1].strip())
-        elif 'ITEM: NUMBER OF ATOMS' in line:
-            num_atoms = int(lines[idx + 1].strip())
-        elif 'ITEM: BOX BOUNDS' in line:
-            bounds = lines[idx + 1:idx + 4]
-            current_box_size = [list(map(float, b.split())) for b in bounds]
-        elif 'ITEM: ATOMS' in line:
-            start_index = idx + 1
-            for i in range(start_index, start_index + num_atoms):
-                position = list(map(float, lines[i].strip().split()[4:7]))
-                current_positions.append(position)
-                type = int(lines[i].strip().split()[2])
-                current_types.append(type)
-                mol_id = int(lines[i].strip().split()[1])
-                current_mol_ids.append(mol_id)
-
-    # Append the last timestep data
-    if current_timestep is not None:
-        timesteps.append(current_timestep)
-        box_sizes.append(current_box_size)
-        atom_positions.append(np.array(current_positions))
-        atom_types = np.array(current_types)
-
-    # Sanity check: Does the simulation box size change with time? (It should not.)
+            
+            elif 'ITEM: ATOMS' in line:
+                # Pre-allocate arrays for this frame
+                positions = np.zeros((num_atoms, 3), dtype=np.float32)
+                types = np.zeros(num_atoms, dtype=np.int32)
+                mol_id_frame = np.zeros(num_atoms, dtype=np.int32)
+                
+                # Read atom data in bulk
+                for i in range(num_atoms):
+                    atom_data = file.readline().strip().split()
+                    positions[i] = [float(atom_data[4]), float(atom_data[5]), float(atom_data[6])]
+                    types[i] = int(atom_data[2])
+                    mol_id_frame[i] = int(atom_data[1])
+                
+                atom_positions.append(positions)
+                # Only store types from the first frame
+                if len(current_types) == 0:
+                    current_types = types
+                mol_ids.append(mol_id_frame)
+                
+            line = file.readline()
+    
+    # Convert lists to arrays
+    timesteps = np.array(timesteps)
     box_sizes = np.array(box_sizes)
+    atom_positions = np.array(atom_positions)
+    mol_ids = np.array(mol_ids)
+    
+    # Sanity check: Does the simulation box size change with time?
     is_constant = np.allclose(box_sizes, box_sizes[0], rtol=1e-5, atol=1e-8)
     if is_constant:
         print("Box size remains constant throughout the simulation. Great!")
         box_sizes = box_sizes[0]
     
     # Sanity check: Since all the chains have the same identity, the atom types should be exactly same.
-    atom_types = np.reshape(atom_types, (atom_types.shape[0]//chain_length, chain_length))
+    atom_types = np.reshape(current_types, (len(current_types)//chain_length, chain_length))
     is_same = np.allclose(atom_types, atom_types[0])
     if is_same:
         print("All chains have the same atom types. Great!")
-    atom_types = atom_types[0]
-
-    # Convert all lists to arrays
-    timesteps = np.array(timesteps)
-    atom_positions = np.array(atom_positions)
-    mol_ids = np.array(mol_ids)
+        atom_types = atom_types[0]
+    
+    print(f"Loaded {len(timesteps)} frames with {num_atoms} atoms")
     
     return timesteps, box_sizes, num_atoms, atom_positions, atom_types, mol_ids
 
@@ -180,4 +179,5 @@ if __name__=="__main__":
 
     # Determine the unique mol. ids
     unique_mol_ids = np.unique(mol_ids)
-    print(mol_ids.shape)
+    
+    
