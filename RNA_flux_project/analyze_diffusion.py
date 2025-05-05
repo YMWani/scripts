@@ -185,7 +185,8 @@ if __name__=="__main__":
     for umolid in tqdm(unique_mol_ids):
         # Extract the trajectory of the guest chain
         mask = (mol_ids == umolid)
-        print(mask.shape)
-        print(mask.sum())
-        exit()
         
+        guest_chain_traj = atom_positions[mask]
+
+        print(guest_chain_traj)
+        exit()
