@@ -215,5 +215,5 @@ if __name__=="__main__":
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
 
-    print(com_positions.shape)
-    # for i in range(com_positions.shape[1]):
+    for i in range(com_positions.shape[1]):
+        print(f"Analyzing chain {i+1}")
