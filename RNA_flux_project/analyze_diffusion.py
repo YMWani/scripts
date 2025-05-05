@@ -212,7 +212,8 @@ if __name__=="__main__":
     # Get the mass of chain monomers using particle types
     chain_masses = extract_particle_masses(atom_types)
     
-    com_positions = compute_COM_positions(atom_positions_reshaped, chain_masses)
+    com_positions = compute_COM_positions(atom_positions_reshaped, chain_masses) # unwrapped coordinates
+    com_positions_wrapped = wrap_positions_inside_sim_box(com_positions, box_sizes) # wrapped coordinates
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
 
@@ -227,8 +228,7 @@ if __name__=="__main__":
         print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
 
         diff = mask_int[:-1] - mask_int[1:]
-        print(np.where(diff == -1)[0])
+        indices = np.where(diff == -1)[0]
+        print(indices[:-1] - indices[1:])
 
-        plt.plot(chain_traj[:,2])
-        plt.savefig("plot.png")
         exit()
