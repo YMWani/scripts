@@ -230,5 +230,5 @@ if __name__=="__main__":
         print(np.where(diff == -1)[0])
 
         plt.plot(chain_traj[:,1])
-        plt.show()
+        plt.savefig("plot.png")
         exit()
