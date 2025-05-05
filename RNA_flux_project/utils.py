@@ -8,7 +8,7 @@ import pathlib
 import random
 from generate_sphere import sphere
 current_dir = pathlib.Path(__file__).resolve().parent
-plt.style.use(f"{current_dir}/../plotting/ymw.mplstyle")
+plt.style.use(f"{current_dir}/../plotting/joseph_group.mplstyle")
 import random
 import pandas as pd
 
