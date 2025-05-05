@@ -15,7 +15,7 @@ From the trajectory of the guest chains, we want to measure the diffusion of the
 chains as they move through the host condensate. 
 We will do this by measuring the mean square displacement (MSD) of the guest chains over time.
 
-Algortithm:
+Algorithm:
 1. Load the trajectory of the guest chains and determine the unique mol. ids.
 2. For each mol. id, determine the timesteps at which the guest chain is in the cavity.
     (Binary mask: 1 if the guest chain is in the cavity, 0 otherwise)
