@@ -161,6 +161,21 @@ def compute_COM_positions(positions, mass):
     
     return com_positions
 
+def extract_particle_masses(types):
+    """
+    Extract the masses of particles given an array containing particle types
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        amino_acid_dict = json.load(f)
+    
+    masses = []
+    for type in types:
+        type = type%20
+        mass = get_mass_by_id(amino_acid_dict, type)
+        masses.append(mass)
+
+    return masses
 
 
 
@@ -189,18 +204,18 @@ if __name__=="__main__":
                                           atom_positions.shape[1]//Nm,
                                           Nm,
                                           atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
-
-    print(atom_positions_reshaped.shape)
     
-    print(atom_positions_reshaped[0,0])
-    print(atom_positions_reshaped[0,1])
+    # Get the mass of chain monomers using particle types
+    chain_masses = extract_particle_masses(atom_types)
+    
+    com_positions = compute_COM_positions(atom_positions_reshaped, chain_masses)
+
 
     # # Iterate through each unique mol. id. and extract the trajectory of the guest chain
     # for umolid in tqdm(unique_mol_ids):
     #     # Extract the trajectory of the guest chain
     #     mask = (mol_ids == umolid)
         
-    #     # Extract the trajectory of the guest chain
-    #     guest_chain_traj = atom_positions[mask]
+    #     # Extract the trajectory of the guest chain COM
+    #     guest_chain_traj = atom_positions_reshaped[mask]
 
-    #     # Compute the center of mass 
