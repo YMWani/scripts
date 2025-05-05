@@ -222,9 +222,10 @@ if __name__=="__main__":
 
         # Determine the timesteps at which the guest chain is in the cavity
         mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0) # TRUE: Inside cavity; FALSE: Outside cavity
+        mask_int = mask.astype(int)
 
         print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
 
-        diff = mask[:-1] - mask[1:]
+        diff = mask_int[:-1] - mask_int[1:]
         print(diff)
         exit()
