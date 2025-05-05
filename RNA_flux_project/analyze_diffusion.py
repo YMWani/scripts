@@ -229,6 +229,6 @@ if __name__=="__main__":
         diff = mask_int[:-1] - mask_int[1:]
         print(np.where(diff == -1)[0])
 
-        plt.plot(chain_traj[:,1])
+        plt.plot(chain_traj[:,2])
         plt.savefig("plot.png")
         exit()
