@@ -58,6 +58,7 @@ def read_lammps_trajectory(file_path, chain_length):
         while line:
             if 'ITEM: TIMESTEP' in line:
                 timestep = int(file.readline().strip())
+                print(timestep)
                 timesteps.append(timestep)
             
             elif 'ITEM: NUMBER OF ATOMS' in line:
