@@ -256,10 +256,7 @@ if __name__=="__main__":
         actual_timesteps.append(i * delta_t)
     actual_timesteps = np.array(actual_timesteps)
     
-    print(actual_timesteps.shape)
-    print(timesteps.shape)
-    exit()
-
+    
     numFrames = len(timesteps)
 
     print(f"\nTrajectory file details:")
