@@ -274,10 +274,11 @@ if __name__=="__main__":
         # 2: Dilute phase
         chain_location = np.zeros(numFrames, dtype=int)
         
-        mask = ((chain_traj_wrapped[:,2] >= args.condensate_bounds[0]) & (chain_traj_wrapped[:,2] <= args.cavity_bounds[0])) | \
-                ((chain_traj_wrapped[:,2] >= args.cavity_bounds[1]) & (chain_traj_wrapped[:,2] <= args.condensate_bounds[1])) 
+        mask = ((chain_traj_wrapped[:,2] >= args.condensate_bounds[0]) & (chain_traj_wrapped[:,2] <= args.cavity_bounds[0]))
         chain_location[mask] = 1 # Condensate
-
+        mask = ((chain_traj_wrapped[:,2] >= args.cavity_bounds[1]) & (chain_traj_wrapped[:,2] <= args.condensate_bounds[1])) 
+        chain_location[mask] = 1 # Condensate
+        
         mask = (chain_traj_wrapped[:,2] <= args.condensate_bounds[0]) | (chain_traj_wrapped[:,2] >= args.condensate_bounds[1])
         chain_location[mask] = 2 # Dilute phase
         
