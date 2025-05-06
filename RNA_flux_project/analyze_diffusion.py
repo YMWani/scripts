@@ -280,6 +280,11 @@ if __name__=="__main__":
     com_positions = compute_COM_positions(atom_positions_reshaped, chain_masses) # unwrapped coordinates
     com_positions_wrapped = wrap_positions_inside_sim_box(com_positions, box_sizes) # wrapped coordinates
 
+
+    # Create empty lists/arrays to store data
+    flux_times = []
+
+
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
 
     for i in range(com_positions.shape[1]):
@@ -305,7 +310,8 @@ if __name__=="__main__":
         count, transition_indices = count_transitions(chain_location)
         
         for start_idx, end_idx in transition_indices:
-            print(chain_location[start_idx:end_idx+1])
+            print(actual_timesteps[start_idx], actual_timesteps[end_idx])
+            print(chain_location[start_idx:end_idx])
         
 
         # # Determine the timesteps at which the guest chain is in the cavity
