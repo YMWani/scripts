@@ -287,7 +287,7 @@ if __name__=="__main__":
         print(transition_indices)
 
         for start_idx, end_idx in transition_indices:
-            print(chain_location[start_idx:end_idx])
+            print(chain_location[start_idx:end_idx+1])
         
 
         # # Determine the timesteps at which the guest chain is in the cavity
