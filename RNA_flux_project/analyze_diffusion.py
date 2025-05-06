@@ -239,6 +239,16 @@ if __name__=="__main__":
 
     print(f"Extracting data from trajectory file.")
     timesteps, box_sizes, num_atoms, atom_positions, atom_types, mol_ids = read_lammps_trajectory(f"{file_path}/{traj}", Nm)
+    
+    # NOTE: By design the trajectory file contains frames just before and after the MC move.
+    # Therefore the two frames are identical except for the chains that were involved in the MC move. 
+    # We can remove the frames which are basically at the same timestep.
+    # Let's remove the frame at every timestep=0
+    mask_tstep = np.where(timesteps == 0)[0]
+    print(mask_tstep.sum())
+    exit()
+
+    
     numFrames = len(timesteps)
 
     print(f"\nTrajectory file details:")
@@ -246,8 +256,6 @@ if __name__=="__main__":
     print(f"# particles:{num_atoms}")
     print(f"Number of chains:{num_atoms//Nm}")
 
-    print(timesteps)
-    exit()
 
     # Determine the COM trajectory of the guest chains
     print(f"\nComputing COM positions of the guest chains")
