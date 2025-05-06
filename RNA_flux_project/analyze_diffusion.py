@@ -255,8 +255,9 @@ if __name__=="__main__":
     for i in range(len(timesteps)):
         actual_timesteps.append(i * delta_t)
     actual_timesteps = np.array(actual_timesteps)
-    print(actual_timesteps[:500])
-    print(timesteps[:500])
+    
+    print(actual_timesteps.shape)
+    print(timesteps.shape)
     exit()
 
     numFrames = len(timesteps)
