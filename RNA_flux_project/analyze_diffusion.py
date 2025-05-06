@@ -310,8 +310,7 @@ if __name__=="__main__":
         count, transition_indices = count_transitions(chain_location)
         
         for start_idx, end_idx in transition_indices:
-            print(actual_timesteps[start_idx], actual_timesteps[end_idx])
-            print(chain_location[start_idx:end_idx])
+            flux_times.append(actual_timesteps[end_idx] - actual_timesteps[start_idx])
         
 
         # # Determine the timesteps at which the guest chain is in the cavity
@@ -324,4 +323,5 @@ if __name__=="__main__":
         # indices = np.where(diff == -1)[0]
         # print(indices[1:] - indices[:-1])
 
-        exit()
+    flux_times = np.array(flux_times)
+    print(np.mean(flux_times))
