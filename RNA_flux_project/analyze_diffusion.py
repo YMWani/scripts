@@ -29,6 +29,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, required=True) # dir where data is stored
 parser.add_argument("--traj_guest", type=str, required=True) # trajectory file tracking the guest chains only
 parser.add_argument("--chain_length", type=int, required=True) # Length of the guest chains
+parser.add_argument("--cavity_bounds", type=float, nargs=2, required=True) # Cavity bounds in z-direction
+parser.add_argument("--condensate_bounds", type=float, nargs=2, required=True) # Condensate bounds in z-direction
 args = parser.parse_args()
 
 def read_lammps_trajectory(file_path, chain_length):
@@ -219,16 +221,33 @@ if __name__=="__main__":
 
     for i in range(com_positions.shape[1]):
         print(f"\nAnalyzing chain {i+1}")
-        chain_traj = com_positions[:,i,:] # [#frames, 3]
+        chain_traj = com_positions[:,i,:] # [#frames, 3] (unwrapped coordinates)
+        chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
 
-        # Determine the timesteps at which the guest chain is in the cavity
-        mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0) # TRUE: Inside cavity; FALSE: Outside cavity
-        mask_int = mask.astype(int)
+        # Array to store information about chain location in the simulation box
+        # 0: Cavity
+        # 1: Condensate
+        # 2: Dilute phase
+        chain_location = np.zeros(numFrames, dtype=int)
+        
+        mask = ((chain_traj_wrapped[:,2] >= args.condensate_bounds[0]) & (chain_traj_wrapped[:,2] <= args.cavity_bounds[1])) | \
+                ((chain_traj_wrapped[:,2] >= args.cavity_bounds[0]) & (chain_traj_wrapped[:,2] <= args.condensate_bounds[1])) 
+        chain_location[mask] = 1 # Condensate
 
-        print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
+        mask = (chain_traj_wrapped[:,2] <= args.condensate_bounds[0]) | (chain_traj_wrapped[:,2] >= args.condensate_bounds[1])
+        chain_location[mask] = 2 # Dilute phase
+        
+        print(chain_location)
 
-        diff = mask_int[:-1] - mask_int[1:]
-        indices = np.where(diff == -1)[0]
-        print(indices[1:] - indices[:-1])
+
+        # # Determine the timesteps at which the guest chain is in the cavity
+        # mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0) # TRUE: Inside cavity; FALSE: Outside cavity
+        # mask_int = mask.astype(int)
+
+        # print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
+
+        # diff = mask_int[:-1] - mask_int[1:]
+        # indices = np.where(diff == -1)[0]
+        # print(indices[1:] - indices[:-1])
 
         exit()
