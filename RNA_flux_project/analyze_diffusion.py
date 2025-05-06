@@ -246,6 +246,9 @@ if __name__=="__main__":
     print(f"# particles:{num_atoms}")
     print(f"Number of chains:{num_atoms//Nm}")
 
+    print(timesteps)
+    exit()
+
     # Determine the COM trajectory of the guest chains
     print(f"\nComputing COM positions of the guest chains")
     # Reshape position array to separate each chain
@@ -284,9 +287,7 @@ if __name__=="__main__":
         
         # Determine the number of events when a chain starts from the cavity, travels through the condensate and exits to the dilute phase
         count, transition_indices = count_transitions(chain_location)
-        print(count)
-        print(transition_indices)
-
+        
         for start_idx, end_idx in transition_indices:
             print(chain_location[start_idx:end_idx+1])
         
