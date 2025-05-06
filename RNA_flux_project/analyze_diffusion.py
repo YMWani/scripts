@@ -237,7 +237,9 @@ if __name__=="__main__":
         mask = (chain_traj_wrapped[:,2] <= args.condensate_bounds[0]) | (chain_traj_wrapped[:,2] >= args.condensate_bounds[1])
         chain_location[mask] = 2 # Dilute phase
         
-        print(chain_location)
+        print(np.where(chain_location == 0)[0])
+        print(np.where(chain_location == 1)[0])
+        print(np.where(chain_location == 2)[0])
 
 
         # # Determine the timesteps at which the guest chain is in the cavity
