@@ -185,7 +185,51 @@ def get_mass_by_id(amino_dict, id_to_find):
             return data['mass']
     return None
 
-
+def count_transitions(chain_location):
+    """
+    Count the number of events when a chain starts from the cavity (0),
+    travels through the condensate (1) and exits to the dilute phase (2).
+    
+    Arguments:
+    - chain_location: Array with values 0 (cavity), 1 (condensate), or 2 (dilute phase)
+    
+    Returns:
+    - count: Number of complete transitions (0->1->2)
+    - transition_indices: List of tuples containing (start_idx, end_idx) for each transition
+    """
+    count = 0
+    transition_indices = []
+    
+    # State tracking variables
+    in_transition = False
+    transition_start = -1
+    
+    for i in range(len(chain_location)):
+        current = chain_location[i]
+        
+        # Start of potential transition (found a 0)
+        if not in_transition and current == 0:
+            in_transition = True
+            transition_start = i
+            
+        # In the middle of transition (should be 1)
+        elif in_transition and current == 0:
+            # Reset if we see another 0
+            transition_start = i
+            
+        # End of transition (found a 2)
+        elif in_transition and current == 2:
+            # Verify we've passed through 1s
+            if 1 in chain_location[transition_start:i]:
+                count += 1
+                transition_indices.append((transition_start, i))
+            
+            # Reset tracking
+            in_transition = False
+            transition_start = -1
+            
+    return count, transition_indices
+      
 
 # Call functions
 if __name__=="__main__":
@@ -237,9 +281,8 @@ if __name__=="__main__":
         mask = (chain_traj_wrapped[:,2] <= args.condensate_bounds[0]) | (chain_traj_wrapped[:,2] >= args.condensate_bounds[1])
         chain_location[mask] = 2 # Dilute phase
         
-        print(np.where(chain_location == 0)[0])
-        print(np.where(chain_location == 1)[0])
-        print(np.where(chain_location == 2)[0])
+        # Determine the number of events when a chain starts from the cavity, travels through the condensate and exits to the dilute phase
+
 
 
         # # Determine the timesteps at which the guest chain is in the cavity
