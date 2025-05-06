@@ -4,6 +4,7 @@ import pathlib
 from tqdm import tqdm
 from pathlib import Path
 from scipy.optimize import curve_fit
+from scipy.stats import sem
 import json
 from matplotlib.cm import viridis
 current_dir = pathlib.Path(__file__).resolve().parent
@@ -325,3 +326,4 @@ if __name__=="__main__":
 
     flux_times = np.array(flux_times)
     print(np.mean(flux_times))
+    print(sem(flux_times))
