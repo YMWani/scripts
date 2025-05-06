@@ -286,6 +286,9 @@ if __name__=="__main__":
         print(count)
         print(transition_indices)
 
+        for start_idx, end_idx in transition_indices:
+            print(chain_location[start_idx:end_idx])
+        
 
         # # Determine the timesteps at which the guest chain is in the cavity
         # mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0) # TRUE: Inside cavity; FALSE: Outside cavity
