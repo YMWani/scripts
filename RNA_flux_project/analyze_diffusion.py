@@ -282,7 +282,9 @@ if __name__=="__main__":
         chain_location[mask] = 2 # Dilute phase
         
         # Determine the number of events when a chain starts from the cavity, travels through the condensate and exits to the dilute phase
-
+        count, transition_indices = count_transitions(chain_location)
+        print(count)
+        print(transition_indices)
 
 
         # # Determine the timesteps at which the guest chain is in the cavity
