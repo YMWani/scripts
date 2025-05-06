@@ -220,7 +220,7 @@ def count_transitions(chain_location):
         # End of transition (found a 2)
         elif in_transition and current == 2:
             # Verify we've passed through 1s
-            if 1 in chain_location[transition_start:i]:
+            if np.all(chain_location[transition_start+1:i] == 1):
                 count += 1
                 transition_indices.append((transition_start, i))
             
