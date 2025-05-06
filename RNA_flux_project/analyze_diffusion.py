@@ -244,11 +244,21 @@ if __name__=="__main__":
     # Therefore the two frames are identical except for the chains that were involved in the MC move. 
     # We can remove the frames which are basically at the same timestep.
     # Let's remove the frame at every timestep=0
+
+    print(atom_positions.shape)
+    print(timesteps.shape)
+    print(mol_ids.shape)
+
     mask_tstep = np.where(timesteps == 0)[0]
-    print(mask_tstep.sum())
+    timesteps = np.delete(timesteps, mask_tstep)
+    atom_positions = np.delete(atom_positions, mask_tstep, axis=0)
+    mol_ids = np.delete(mol_ids, mask_tstep, axis=0)
+
+    print(atom_positions.shape)
+    print(timesteps.shape)
+    print(mol_ids.shape)
     exit()
 
-    
     numFrames = len(timesteps)
 
     print(f"\nTrajectory file details:")
