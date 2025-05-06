@@ -325,5 +325,6 @@ if __name__=="__main__":
         # print(indices[1:] - indices[:-1])
 
     flux_times = np.array(flux_times)
-    print(np.mean(flux_times))
-    print(sem(flux_times))
+    avg_flux_time = np.mean(flux_times)
+    err_flux_time = sem(flux_times)
+    print(f"Average time for a complete flux for a chain: {avg_flux_time/1e5:.3f} ± {err_flux_time/1e5:.3f} ns")
