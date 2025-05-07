@@ -323,7 +323,7 @@ if __name__=="__main__":
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
 
 
-        """ 1. Average tiem for a chain to completely flux through the condensate"""
+        """ 1. Average time for a chain to completely flux through the condensate"""
         # Array to store information about chain location in the simulation box
         # 0: Cavity
         # 1: Condensate
@@ -358,11 +358,15 @@ if __name__=="__main__":
         """ 2. Spatially dependent MSD"""
         # Divide the "host condensate" region in three parts.
         delta_z = np.abs((args.condensate_bounds[1] - args.cavity_bounds[1]) / 3) # Condensate on both sides of the cavity is approximately equal
+        
+        # Determine the slice indices for the chain COM trajectory
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
-        print(np.where(slice_indices == 0)[0])
-        print(np.where(slice_indices == 1)[0])
-        print(np.where(slice_indices == 2)[0])
-        print(np.where(slice_indices == 3)[0])
+        
+
+        print(np.equal(np.where(slice_indices == 0)[0], np.sort(np.where(slice_indices == 0)[0])))
+        print(np.equal(np.where(slice_indices == 1)[0], np.sort(np.where(slice_indices == 1)[0])))
+        print(np.equal(np.where(slice_indices == 2)[0], np.sort(np.where(slice_indices == 2)[0])))
+        print(np.equal(np.where(slice_indices == 3)[0], np.sort(np.where(slice_indices == 3)[0])))
         
         exit()    
     
