@@ -392,14 +392,18 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
         ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
         for start_idx, end_idx in ranges:
-            # extract the trajectory of the chain for the given range
-            chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
-            print(chain_sub_traj.shape)
-            # compute the MSD for the given range
-            msd_ = freud.msd.MSD()
-            msd_.compute(positions=chain_sub_traj)
-            msd_values[0, 0:msd_.msd.shape[0]] += msd_.msd
-            msd_counter[0, 0:msd_.msd.shape[0]] += 1
+            # Check if the range is long enough (> 5ns)
+            time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
+            if time_ > 5:
+                print(time_)
+                # extract the trajectory of the chain for the given range
+                chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
+                print(chain_sub_traj.shape)
+                # compute the MSD for the given range
+                msd_ = freud.msd.MSD()
+                msd_.compute(positions=chain_sub_traj)
+                msd_values[0, 0:msd_.msd.shape[0]] += msd_.msd
+                msd_counter[0, 0:msd_.msd.shape[0]] += 1
         
 
         # # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
