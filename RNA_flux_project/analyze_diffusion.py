@@ -403,8 +403,8 @@ if __name__=="__main__":
                 msd_values[0, 0:msd_.msd.shape[0]] += msd_.msd
                 msd_counter[0, 0:msd_.msd.shape[0]] += 1
         
-        print(msd_counter)
-        print(msd_values)
+        print(msd_counter[0])
+        print(msd_values[0])
 
         # # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
         # ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
