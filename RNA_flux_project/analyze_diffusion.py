@@ -230,7 +230,36 @@ def count_transitions(chain_location):
             transition_start = -1
             
     return count, transition_indices
-      
+
+def determine_slice(cavity, delta_z, atom_positions):
+    """
+    Determine the slice of the condensate region that a given chain is in at every timestep.
+    """
+    # Empty array to store the slice index for each timestep
+    # 1: Close to the cavity, 2: Middle of the condensate, 3: Close to the dilute phase
+    # 0: Outside the condensate
+    slice_indices = np.zeros(atom_positions.shape[0], dtype=int)
+
+    # Region 1: Close to the cavity
+    mask = (atom_positions[:,2] <= cavity[0]) & (atom_positions[:,2] >= cavity[0]-delta_z)
+    slice_indices[mask] = 1
+    mask = (atom_positions[:,2] >= cavity[1]) & (atom_positions[:,2] <= cavity[1]+delta_z)
+    slice_indices[mask] = 1
+
+    # Region 2: Middle of the condensate
+    mask = (atom_positions[:,2] <= cavity[0]-delta_z) & (atom_positions[:,2] >= cavity[0]-2*delta_z)
+    slice_indices[mask] = 2
+    mask = (atom_positions[:,2] >= cavity[1]+delta_z) & (atom_positions[:,2] <= cavity[1]+2*delta_z)
+    slice_indices[mask] = 2
+
+    # Region 3: Close to the dilute phase
+    mask = (atom_positions[:,2] <= cavity[0]-2*delta_z) & (atom_positions[:,2] >= cavity[0]-3*delta_z)
+    slice_indices[mask] = 3
+    mask = (atom_positions[:,2] >= cavity[1]+2*delta_z) & (atom_positions[:,2] <= cavity[1]+3*delta_z)
+    slice_indices[mask] = 3
+
+    return slice_indices
+
 
 # Call functions
 if __name__=="__main__":
@@ -327,9 +356,11 @@ if __name__=="__main__":
         # print(indices[1:] - indices[:-1])
 
         """ 2. Spatially dependent MSD"""
-        # Divide the simulation box into slices.
-        print(args.cavity_bounds[0] - args.condensate_bounds[0])
-        print(args.condensate_bounds[1] - args.cavity_bounds[1])
+        # Divide the "host condensate" region in three parts.
+        delta_z = np.abs((args.condensate_bounds[1] - args.cavity_bounds[1]) / 3) # Condensate on both sides of the cavity is approximately equal
+        slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
+        print(slice_indices)
+        
         exit()    
     
     flux_times = np.array(flux_times)
