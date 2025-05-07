@@ -403,17 +403,35 @@ if __name__=="__main__":
                 msd_values[0, 0:msd_.msd.shape[0]] += msd_.msd
                 msd_counter[0, 0:msd_.msd.shape[0]] += 1
         
-        print(msd_counter[0])
-        print(msd_values[0])
-
-        # # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
-        # ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
+        # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
+        ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
+        for start_idx, end_idx in ranges:
+            # Check if the range is long enough (> 5ns)
+            time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
+            if time_ > 5:
+                # extract the trajectory of the chain for the given range
+                chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
+                # compute the MSD for the given range
+                msd_ = freud.msd.MSD()
+                msd_.compute(positions=chain_sub_traj)
+                msd_values[1, 0:msd_.msd.shape[0]] += msd_.msd
+                msd_counter[1, 0:msd_.msd.shape[0]] += 1
         
-        # # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
-        # ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
-        
-        exit()
+        # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
+        ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
+        for start_idx, end_idx in ranges:
+            # Check if the range is long enough (> 5ns)
+            time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
+            if time_ > 5:
+                # extract the trajectory of the chain for the given range
+                chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
+                # compute the MSD for the given range
+                msd_ = freud.msd.MSD()
+                msd_.compute(positions=chain_sub_traj)
+                msd_values[2, 0:msd_.msd.shape[0]] += msd_.msd
+                msd_counter[2, 0:msd_.msd.shape[0]] += 1
     
+    # Save flux data
     flux_times = np.array(flux_times)
     avg_flux_time = np.mean(flux_times)
     err_flux_time = sem(flux_times)
@@ -428,3 +446,6 @@ if __name__=="__main__":
     with open(output_file, "w") as f:
         json.dump(output_data, f, indent=4)
 
+    # Process the MSD data
+    msd_values /= msd_counter
+    
