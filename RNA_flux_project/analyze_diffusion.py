@@ -397,16 +397,17 @@ if __name__=="__main__":
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
         
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
-        print(np.where(slice_indices == 1)[0])
         ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
-
+        print(ranges)
 
         # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
         ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
+        print(ranges)
 
         # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
         ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
-
+        print(ranges)
+        
         exit()
     
     flux_times = np.array(flux_times)
