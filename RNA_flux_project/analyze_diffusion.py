@@ -363,10 +363,10 @@ if __name__=="__main__":
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
         
 
-        print(np.equal(np.where(slice_indices == 0)[0], np.sort(np.where(slice_indices == 0)[0])))
-        print(np.equal(np.where(slice_indices == 1)[0], np.sort(np.where(slice_indices == 1)[0])))
-        print(np.equal(np.where(slice_indices == 2)[0], np.sort(np.where(slice_indices == 2)[0])))
-        print(np.equal(np.where(slice_indices == 3)[0], np.sort(np.where(slice_indices == 3)[0])))
+        print(np.equal(np.where(slice_indices == 0)[0], np.sort(np.where(slice_indices == 0)[0])).all())
+        print(np.equal(np.where(slice_indices == 1)[0], np.sort(np.where(slice_indices == 1)[0])).all())
+        print(np.equal(np.where(slice_indices == 2)[0], np.sort(np.where(slice_indices == 2)[0])).all())
+        print(np.equal(np.where(slice_indices == 3)[0], np.sort(np.where(slice_indices == 3)[0])).all())
         
         exit()    
     
