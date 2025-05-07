@@ -328,14 +328,13 @@ if __name__=="__main__":
     avg_flux_time = np.mean(flux_times)
     err_flux_time = sem(flux_times)
     print(f"Average time for a complete flux for a chain: {avg_flux_time/1e5:.3f} ± {err_flux_time/1e5:.3f} ns")
-
     # Save the flux times to a file
     output_data = {
-        "avg_flux_time": avg_flux_time,
-        "err_flux_time": err_flux_time,
+        "avg_flux_time (ns)": avg_flux_time/1e5,
+        "err_flux_time (ns)": err_flux_time/1e5,
         "flux_times": flux_times.tolist()
     }
-
     output_file = f"{file_path}/flux_times.json"
     with open(output_file, "w") as f:
         json.dump(output_data, f, indent=4)
+
