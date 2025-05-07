@@ -396,10 +396,10 @@ if __name__=="__main__":
             chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
             print(chain_sub_traj.shape)
             # compute the MSD for the given range
-            msd = freud.msd.MSD()
-            msd.compute(positions=chain_sub_traj)
-            msd_values[0, 0:msd.shape[0]] += msd.msd
-            msd_counter[0, 0:msd.shape[0]] += 1
+            msd_ = freud.msd.MSD()
+            msd_.compute(positions=chain_sub_traj)
+            msd_values[0, 0:msd_.msd.shape[0]] += msd_.msd
+            msd_counter[0, 0:msd_.msd.shape[0]] += 1
         
 
         # # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
