@@ -399,7 +399,7 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
         ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
         for start_idx, end_idx in ranges:
-            print((end_idx - start_idx)*delta_t)
+            print((end_idx - start_idx)*delta_t/1e5)
 
         # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
         ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
