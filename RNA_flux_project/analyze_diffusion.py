@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
+import freud
 from tqdm import tqdm
 from pathlib import Path
 from scipy.optimize import curve_fit
@@ -347,6 +348,8 @@ if __name__=="__main__":
 
     # Create empty lists/arrays to store data
     flux_times = []
+    msd_values = np.zeros((3, 500)) # [#regions, #frames] NOTE: 500 frames refer to 50 ns in the simulation (delta_t = 0.1 ns -> 500*0.1 = 50 ns)
+    msd_counter = np.zeros((3, 500)) # [#regions, #frames]
 
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
@@ -379,16 +382,6 @@ if __name__=="__main__":
             flux_times.append(actual_timesteps[end_idx] - actual_timesteps[start_idx])
         
 
-        # # Determine the timesteps at which the guest chain is in the cavity
-        # mask = (chain_traj[:,2] >= 950.0) & (chain_traj[:,2] <= 1050.0) # TRUE: Inside cavity; FALSE: Outside cavity
-        # mask_int = mask.astype(int)
-
-        # print(f"Chain {i+1} is in the cavity for {np.sum(mask)/numFrames * 100:.3f}% of the time")
-
-        # diff = mask_int[:-1] - mask_int[1:]
-        # indices = np.where(diff == -1)[0]
-        # print(indices[1:] - indices[:-1])
-
         """ 2. Spatially dependent MSD"""
         # Divide the "host condensate" region in three parts.
         delta_z = np.abs((args.condensate_bounds[1] - args.cavity_bounds[1]) / 3) # Condensate on both sides of the cavity is approximately equal
@@ -399,20 +392,19 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
         ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
         for start_idx, end_idx in ranges:
-            if (end_idx - start_idx)*delta_t/1e5 > 1.0:
-                print((end_idx - start_idx)*delta_t/1e5)
-
-        # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
-        ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
-        for start_idx, end_idx in ranges:
-            if (end_idx - start_idx)*delta_t/1e5 > 1.0:
-                print((end_idx - start_idx)*delta_t/1e5)
+            # extract the trajectory of the chain for the given range
+            chain_sub_traj = chain_traj[start_idx:end_idx] # unwrapped coordinates
+            # compute the MSD for the given range
+            msd = freud.msd.MSD.compute(positions=chain_sub_traj)
+            msd_values[0, 0:msd.shape[0]] += msd
+            msd_counter[0, 0:msd.shape[0]] += 1
         
-        # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
-        ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
-        for start_idx, end_idx in ranges:
-            if (end_idx - start_idx)*delta_t/1e5 > 1.0:
-                print((end_idx - start_idx)*delta_t/1e5)
+
+        # # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
+        # ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
+        
+        # # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
+        # ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
         
         exit()
     
