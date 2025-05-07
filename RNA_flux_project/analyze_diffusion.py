@@ -293,6 +293,8 @@ if __name__=="__main__":
         chain_traj = com_positions[:,i,:] # [#frames, 3] (unwrapped coordinates)
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
 
+
+        """ 1. Average tiem for a chain to completely flux through the condensate"""
         # Array to store information about chain location in the simulation box
         # 0: Cavity
         # 1: Condensate
@@ -324,6 +326,12 @@ if __name__=="__main__":
         # indices = np.where(diff == -1)[0]
         # print(indices[1:] - indices[:-1])
 
+        """ 2. Spatially dependent MSD"""
+        # Divide the simulation box into slices.
+        print(args.cavity_bounds[0] - args.condensate_bounds[0])
+        print(args.condensate_bounds[1] - args.cavity_bounds[1])
+        exit()    
+    
     flux_times = np.array(flux_times)
     avg_flux_time = np.mean(flux_times)
     err_flux_time = sem(flux_times)
