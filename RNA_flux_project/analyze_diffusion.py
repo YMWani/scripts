@@ -395,7 +395,7 @@ if __name__=="__main__":
             # extract the trajectory of the chain for the given range
             chain_sub_traj = chain_traj[start_idx:end_idx] # unwrapped coordinates
             # compute the MSD for the given range
-            msd = freud.msd.MSD.compute(positions=chain_sub_traj)
+            msd = freud.msd.MSD(positions=chain_sub_traj)
             msd_values[0, 0:msd.shape[0]] += msd
             msd_counter[0, 0:msd.shape[0]] += 1
         
