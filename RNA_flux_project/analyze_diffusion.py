@@ -274,26 +274,21 @@ def find_consecutive_ranges(arr):
     Input: [1, 2, 3, 5, 6, 7, 10, 15, 16]
     Output: [(1, 3), (5, 7), (10, 10), (15, 16)]
     """
-    if not arr:
-        return []
-    
-    # Sort the array
-    sorted_arr = sorted(arr)
     ranges = []
     
     # Initialize with first element
-    range_start = sorted_arr[0]
-    range_end = sorted_arr[0]
+    range_start = arr[0]
+    range_end = arr[0]
     
-    for i in range(1, len(sorted_arr)):
+    for i in range(1, len(arr)):
         # If current element continues the sequence
-        if sorted_arr[i] == range_end + 1:
-            range_end = sorted_arr[i]
+        if arr[i] == range_end + 1:
+            range_end = arr[i]
         # If gap found, store the previous range and start a new one
         else:
             ranges.append((range_start, range_end))
-            range_start = sorted_arr[i]
-            range_end = sorted_arr[i]
+            range_start = arr[i]
+            range_end = arr[i]
     
     # Add the last range
     ranges.append((range_start, range_end))
@@ -402,17 +397,16 @@ if __name__=="__main__":
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
         
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
+        print(np.where(slice_indices == 1)[0])
         ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
-        print(ranges)
+
 
         # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
         ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
-        print(ranges)
 
         # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
         ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
-        print(ranges)
-        
+
         exit()
     
     flux_times = np.array(flux_times)
