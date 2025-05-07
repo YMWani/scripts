@@ -393,12 +393,12 @@ if __name__=="__main__":
         ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
         for start_idx, end_idx in ranges:
             # extract the trajectory of the chain for the given range
-            chain_sub_traj = chain_traj[start_idx:end_idx] # unwrapped coordinates
+            chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
             print(chain_sub_traj.shape)
             # compute the MSD for the given range
             msd = freud.msd.MSD()
             msd.compute(positions=chain_sub_traj)
-            msd_values[0, 0:msd.shape[0]] += msd
+            msd_values[0, 0:msd.shape[0]] += msd.msd
             msd_counter[0, 0:msd.shape[0]] += 1
         
 
