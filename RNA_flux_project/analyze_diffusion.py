@@ -359,7 +359,10 @@ if __name__=="__main__":
         # Divide the "host condensate" region in three parts.
         delta_z = np.abs((args.condensate_bounds[1] - args.cavity_bounds[1]) / 3) # Condensate on both sides of the cavity is approximately equal
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
-        print(slice_indices)
+        print(np.where(slice_indices == 0)[0])
+        print(np.where(slice_indices == 1)[0])
+        print(np.where(slice_indices == 2)[0])
+        print(np.where(slice_indices == 3)[0])
         
         exit()    
     
