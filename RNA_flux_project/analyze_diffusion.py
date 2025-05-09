@@ -350,6 +350,7 @@ if __name__=="__main__":
     flux_times = []
     msd_values = np.zeros((3, 500)) # [#regions, #frames] NOTE: 500 frames refer to 50 ns in the simulation (delta_t = 0.1 ns -> 500*0.1 = 50 ns)
     msd_counter = np.zeros((3, 500)) # [#regions, #frames]
+    msd_timesteps = np.arange(0, 500*delta_t, delta_t) # [#frames]
 
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
@@ -390,8 +391,8 @@ if __name__=="__main__":
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
         
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
-        ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
-        for start_idx, end_idx in ranges:
+        consecutive_ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
+        for start_idx, end_idx in consecutive_ranges:
             # Check if the range is long enough (> 5ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
             if time_ > 5:
@@ -404,8 +405,8 @@ if __name__=="__main__":
                 msd_counter[0, 0:msd_.msd.shape[0]] += 1
         
         # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
-        ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
-        for start_idx, end_idx in ranges:
+        consecutive_ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
+        for start_idx, end_idx in consecutive_ranges:
             # Check if the range is long enough (> 5ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
             if time_ > 5:
@@ -418,8 +419,8 @@ if __name__=="__main__":
                 msd_counter[1, 0:msd_.msd.shape[0]] += 1
         
         # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
-        ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
-        for start_idx, end_idx in ranges:
+        consecutive_ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
+        for start_idx, end_idx in consecutive_ranges:
             # Check if the range is long enough (> 5ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
             if time_ > 5:
@@ -448,4 +449,4 @@ if __name__=="__main__":
 
     # Process the MSD data
     msd_values /= msd_counter
-    
+    np.savetxt("msd.dat", np.column_stack((msd_timesteps, msd_values[0], msd_values[1], msd_values[2])), header="Time(ns)\tMSD_region1\tMSD_region2\tMSD_region3", fmt="%10.5f")
