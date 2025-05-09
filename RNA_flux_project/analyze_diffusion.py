@@ -395,7 +395,7 @@ if __name__=="__main__":
         for start_idx, end_idx in consecutive_ranges:
             # Check if the range is long enough (> 5ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 5:
+            if time_ > 5: # if the chain stays in the region for more than 5ns
                 # extract the trajectory of the chain for the given range
                 chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD for the given range
@@ -448,5 +448,5 @@ if __name__=="__main__":
         json.dump(output_data, f, indent=4)
 
     # Process the MSD data
-    msd_values /= msd_counter
-    np.savetxt("msd.dat", np.column_stack((msd_timesteps, msd_values[0], msd_values[1], msd_values[2])), header="Time(ns)\tMSD_region1\tMSD_region2\tMSD_region3", fmt="%10.5f")
+    msd_normalized = np.divide(msd_values, msd_counter, out=np.zeros_like(msd_values), where=msd_counter!=0) # Avoid division by zero
+    np.savetxt("msd.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2])), header="Time(ns)\tMSD_region1\tMSD_region2\tMSD_region3", fmt="%10.5f")
