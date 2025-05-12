@@ -336,6 +336,58 @@ def generate_contact_map_intramolecular(chain_positions, box_size, chain_atom_ty
                 contact_frequencies += contact_map
     return contact_frequencies
 
+def generate_contact_map_intermolecular(chain1_positions, chain2_positions, box_size, chain1_atom_types, chain2_atom_types, sigma_vals):
+    """
+    Perform intermolecular contact analysis with periodic boundary conditions at a given timestep.
+    
+    Parameters:
+    -----------
+    chain1_positions : numpy.ndarray
+        Array of shape (nchains, chain_length, 3) containing 3D coordinates of protein chains of type 1
+    chain2_positions : numpy.ndarray
+        Array of shape (nchains, chain_length, 3) containing 3D coordinates of protein chains of type 2
+    box_size : numpy.ndarray
+        Size of the simulation box in each dimension
+    chain1_atom_types : numpy.ndarray
+        Array of shape (nchains, chain_length) containing atom types for each chain
+    chain2_atom_types : numpy.ndarray
+        Array of shape (nchains, chain_length) containing atom types for each chain
+    sigma_vals : python dict
+        Dictionary mapping atom types to their sigma values
+    
+    Returns:
+    --------
+    contact_map : numpy.ndarray
+        Boolean matrix of shape (chain_length1, chain_length2) containing contact frequencies
+    """
+    # Create an empty array to store contact frequencies
+    chain_length_1 = chain1_positions.shape[1]
+    chain_length_2 = chain2_positions.shape[1]
+    contact_frequencies = np.zeros((chain_length_1, chain_length_2))
+
+    # Verify if the chain types are the same across all the chains
+    if not np.all(np.all(chain1_atom_types == chain1_atom_types[0,:], axis=0)):
+        raise ValueError("Chain types are not the same across all chains in chain1_positions.")
+    if not np.all(np.all(chain2_atom_types == chain2_atom_types[0,:], axis=0)):
+        raise ValueError("Chain types are not the same across all chains in chain2_positions.")
+
+    # Generate distance threshold matrix (1.2 * sigma)
+    # Needs to be done only once
+    distance_threshold = generate_distance_threshold_matrix(chain1_atom_types[0], chain2_atom_types[0], sigma_vals)
+
+    # Iterate through every pair of chains from different groups
+    for idx1, chain1 in enumerate(chain1_positions):
+        for idx2, chain2 in enumerate(chain2_positions):
+            if not np.array_equal(chain1, chain2):
+                # Generate distance matrix for the selected chains
+                dist_matrix = fast_pbc_distance_matrix(chain1_pos=chain1, chain2_pos=chain2, box_size=box_size)
+                # Create contact map (excluding self-contacts)
+                contact_map = (dist_matrix <= distance_threshold) & (dist_matrix > 0)
+                # Add to contact frequencies
+                contact_frequencies += contact_map
+
+    return contact_frequencies
+
 # **********************************************************************
 
 # Read input arguments
@@ -471,7 +523,7 @@ parent_dir = Path(__file__).parent
 sigma_vals = extract_atom_sigma(f"{parent_dir}/potential_60_particle_types.dat")
 
 # --------------------------------------------------------------
-# Generate contact map for each timestep
+# Generate intramolecular contact map for each timestep
 # --------------------------------------------------------------
 # Create empty array to store contact maps
 contact_map = np.zeros((Nm_host, Nm_host))
@@ -501,3 +553,38 @@ ax.set_ylabel("host protein")
 
 plt.tight_layout()
 plt.savefig(f"contact_map_host-host.pdf")
+
+
+# --------------------------------------------------------------
+# Generate intermolecular contact map for each timestep
+# --------------------------------------------------------------
+# Create empty array to store contact maps
+contact_map = np.zeros((Nm_host, Nm_guest))
+for i, tstep in enumerate(tqdm(range(num_timesteps), desc="Computing intermolecular contact map"), start=1):
+    if i % 100 == 0:
+        # Generate contact map for the current timestep
+        contact_map += generate_contact_map_intermolecular(chain1_positions=host_chain_positions[tstep], 
+                                                           chain2_positions=guest_chain_positions[tstep],
+                                                           box_size=[box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]],
+                                                           chain1_atom_types=host_chain_atom_types, 
+                                                           chain2_atom_types=guest_chain_atom_types,
+                                                           sigma_vals=sigma_vals)
+# Normalize the contact map
+contact_map /= (num_timesteps*nchain_host*nchain_guest)
+
+# Save the contact map to a file
+np.savetxt("contact_map_host-guest.dat", contact_map, fmt="%.4f")
+
+# ----------------------------------------------------------------
+# Plot and save contact map
+# ----------------------------------------------------------------
+fig, ax = plt.subplots(figsize=(12, 12))
+sns.heatmap(contact_map, cmap="viridis", cbar=True, annot=False, cbar_kws={'label': 'Normalized contact frequency'})
+ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False)
+
+ax.set_xlabel("guest protein")
+ax.set_ylabel("host protein")
+
+plt.tight_layout()
+plt.savefig(f"contact_map_host-guest.pdf")
+# --------------------------------------------------------------
