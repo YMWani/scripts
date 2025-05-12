@@ -2,9 +2,11 @@ import numpy as np
 from tqdm import tqdm
 import seaborn as sns
 from pathlib import Path
+import pathlib
 import argparse
 import matplotlib.pyplot as plt
-plt.style.use(f"/Users/yw9071_admin/Documents/scripts/plotting/joseph_group.mplstyle")
+current_dir = pathlib.Path(__file__).resolve().parent
+plt.style.use(f"{current_dir}/../plotting/joseph_group.mplstyle")
 plt.rcParams['text.usetex'] = True
 plt.rcParams['text.latex.preamble'] = '\n'.join([r'\usepackage{sansmath}', r'\sansmath'])
 
