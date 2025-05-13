@@ -616,7 +616,7 @@ ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, r
 ax.set_xlabel("host protein")
 ax.set_ylabel("host protein")
 
-plt.tight_layout()
+# plt.tight_layout()
 plt.savefig(f"contact_map_host-host.pdf")
 
 
@@ -656,7 +656,7 @@ ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, r
 ax.set_xlabel("guest protein")
 ax.set_ylabel("host protein")
 
-plt.tight_layout()
+# plt.tight_layout()
 plt.savefig(f"contact_map_host-guest.pdf")
 
 # --------------------------------------------------------------
