@@ -593,7 +593,7 @@ for tstep in range(0, num_timesteps, args.stride):
                               sigma_vals
     ))
 
-with Pool(processes=min(cpu_count(), 8)) as pool:
+with Pool(processes=min(cpu_count(), 12)) as pool:
     results = list(tqdm(pool.imap(process_frame_intramolecular, frames_to_process), 
                         total=len(frames_to_process), 
                         desc="Computing intramolecular contact maps"))
@@ -634,7 +634,7 @@ for tstep in range(0, num_timesteps, args.stride):
                               sigma_vals
     ))
 
-with Pool(processes=min(cpu_count(), 8)) as pool:
+with Pool(processes=min(cpu_count(), 12)) as pool:
     results = list(tqdm(pool.imap(process_frame_intermolecular, frames_to_process), 
                         total=len(frames_to_process), 
                         desc="Computing intermolecular contact maps"))
