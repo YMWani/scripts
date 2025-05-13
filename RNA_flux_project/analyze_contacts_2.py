@@ -588,7 +588,7 @@ frames_to_process = []
 for tstep in range(0, num_timesteps, args.stride):
     frames_to_process.append((tstep,
                               host_chain_positions[tstep], 
-                              box, 
+                              [box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]], 
                               host_chain_atom_types, 
                               sigma_vals
     ))
@@ -628,7 +628,7 @@ for tstep in range(0, num_timesteps, args.stride):
     frames_to_process.append((tstep,
                               host_chain_positions[tstep],
                               guest_chain_positions[tstep],
-                              box, 
+                              [box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]], 
                               host_chain_atom_types, 
                               guest_chain_atom_types,
                               sigma_vals
