@@ -9,6 +9,7 @@ current_dir = pathlib.Path(__file__).resolve().parent
 plt.style.use(f"{current_dir}/../plotting/joseph_group.mplstyle")
 plt.rcParams['text.usetex'] = True
 plt.rcParams['text.latex.preamble'] = '\n'.join([r'\usepackage{sansmath}', r'\sansmath'])
+from multiprocessing import Pool, cpu_count
 
 """
 From the trajectory of the guest and host chains, over a long flux simulation,
@@ -421,6 +422,30 @@ def generate_contact_map_intermolecular(chain1_positions, chain2_positions, box_
 
     return contact_frequencies
 
+def process_frame_intramolecular(frame_data):
+    tstep, host_positions, box_size, host_types, sigma_vals = frame_data
+    # Generate contact map for the current timestep
+    contact_map = generate_contact_map_intramolecular(
+        chain_positions=host_positions, 
+        box_size=box_size,
+        chain_atom_types=host_types, 
+        sigma_vals=sigma_vals)
+    
+    return contact_map
+
+def process_frame_intermolecular(frame_data):
+    tstep, host_positions, guest_positions, box_size, host_types, guest_types, sigma_vals = frame_data
+    # Generate contact map for the current timestep
+    contact_map = generate_contact_map_intermolecular(
+        chain1_positions=host_positions, 
+        chain2_positions=guest_positions,
+        box_size=box_size,
+        chain1_atom_types=host_types, 
+        chain2_atom_types=guest_types,
+        sigma_vals=sigma_vals)
+    
+    return contact_map
+
 # **********************************************************************
 
 # Read input arguments
@@ -559,16 +584,23 @@ sigma_vals = extract_atom_sigma(f"{parent_dir}/potential_60_particle_types.dat")
 # --------------------------------------------------------------
 # Generate intramolecular contact map for each timestep
 # --------------------------------------------------------------
-# Create empty array to store contact maps
-contact_map = np.zeros((Nm_host, Nm_host))
-for tstep in tqdm(range(0, num_timesteps, args.stride), desc="Computing host chain intramolecular contact map"):
-    # Generate contact map for the current timestep
-    contact_map += generate_contact_map_intramolecular(chain_positions=host_chain_positions[tstep], 
-                                                        box_size=[box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]],
-                                                        chain_atom_types=host_chain_atom_types, 
-                                                        sigma_vals=sigma_vals)
-# Normalize the contact map
-contact_map /= (num_timesteps*nchain_host*nchain_host)
+frames_to_process = []
+for tstep in range(0, num_timesteps, args.stride):
+    frames_to_process.append((tstep,
+                              host_chain_positions[tstep], 
+                              box, 
+                              host_chain_atom_types, 
+                              sigma_vals
+    ))
+
+with Pool(processes=min(cpu_count(), 8)) as pool:
+    results = list(tqdm(pool.imap(process_frame_intramolecular, frames_to_process), 
+                        total=len(frames_to_process), 
+                        desc="Computing intramolecular contact maps"))
+
+# Combine results
+contact_map = sum(results)
+contact_map /= (len(results)*nchain_host*nchain_host)
 
 # Save the contact map to a file
 np.savetxt("contact_map_host-host.dat", contact_map, fmt="%.5e")
@@ -591,18 +623,25 @@ plt.savefig(f"contact_map_host-host.pdf")
 # --------------------------------------------------------------
 # Generate intermolecular contact map for each timestep
 # --------------------------------------------------------------
-# Create empty array to store contact maps
-contact_map = np.zeros((Nm_host, Nm_guest))
-for tstep in tqdm(range(0, num_timesteps, args.stride), desc="Computing intermolecular contact map"):
-    # Generate contact map for the current timestep
-    contact_map += generate_contact_map_intermolecular(chain1_positions=host_chain_positions[tstep], 
-                                                        chain2_positions=guest_chain_positions[tstep],
-                                                        box_size=[box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]],
-                                                        chain1_atom_types=host_chain_atom_types, 
-                                                        chain2_atom_types=guest_chain_atom_types,
-                                                        sigma_vals=sigma_vals)
-# Normalize the contact map
-contact_map /= (num_timesteps*nchain_host*nchain_guest)
+frames_to_process = []
+for tstep in range(0, num_timesteps, args.stride):
+    frames_to_process.append((tstep,
+                              host_chain_positions[tstep],
+                              guest_chain_positions[tstep],
+                              box, 
+                              host_chain_atom_types, 
+                              guest_chain_atom_types,
+                              sigma_vals
+    ))
+
+with Pool(processes=min(cpu_count(), 8)) as pool:
+    results = list(tqdm(pool.imap(process_frame_intermolecular, frames_to_process), 
+                        total=len(frames_to_process), 
+                        desc="Computing intermolecular contact maps"))
+
+# Combine results
+contact_map = sum(results)
+contact_map /= (len(results)*nchain_host*nchain_guest)
 
 # Save the contact map to a file
 np.savetxt("contact_map_host-guest.dat", contact_map, fmt="%.5e")
