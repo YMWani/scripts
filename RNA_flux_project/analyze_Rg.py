@@ -9,6 +9,8 @@ import json
 from matplotlib.cm import viridis
 current_dir = pathlib.Path(__file__).resolve().parent
 plt.style.use(f"{current_dir}/../plotting/joseph_group.mplstyle")
+plt.rcParams['text.usetex'] = True
+plt.rcParams['text.latex.preamble'] = '\n'.join([r'\usepackage{sansmath}', r'\sansmath'])
 import argparse
 
 """
