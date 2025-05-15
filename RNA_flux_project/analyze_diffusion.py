@@ -348,9 +348,10 @@ if __name__=="__main__":
 
     # Create empty lists/arrays to store data
     flux_times = []
-    msd_values = np.zeros((3, 500)) # [#regions, #frames] NOTE: 500 frames refer to 50 ns in the simulation (delta_t = 0.1 ns -> 500*0.1 = 50 ns)
-    msd_counter = np.zeros((3, 500)) # [#regions, #frames]
-    msd_timesteps = np.arange(0, 500*delta_t, delta_t) # [#frames]
+    msd_values = np.zeros((3, 5000)) # [#regions, #frames] NOTE: 5000 frames refer to 500 ns in the simulation (delta_t = 0.1 ns -> 5000*0.1 = 500 ns); 
+    # NOTE: We assume the worst case scenario that a chain remains in the same region throughout the simulation
+    msd_counter = np.zeros((3, 5000)) # [#regions, #frames]
+    msd_timesteps = np.arange(0, 5000*delta_t, delta_t) # [#frames]
 
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
