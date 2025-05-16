@@ -450,4 +450,4 @@ if __name__=="__main__":
 
     # Process the MSD data
     msd_normalized = np.divide(msd_values, msd_counter, out=np.zeros_like(msd_values), where=msd_counter!=0) # Avoid division by zero
-    np.savetxt("msd.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2])), header="Time(ns)\tMSD_region1\tMSD_region2\tMSD_region3", fmt="%10.5f")
+    np.savetxt("msd.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2])), header="Time(ns)\tMSD_region1\tMSD_region2\tMSD_region3", fmt="%1.5e")
