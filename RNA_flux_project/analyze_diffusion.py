@@ -361,7 +361,7 @@ if __name__=="__main__":
         # print(f"\nAnalyzing chain {i+1}")
         chain_traj = com_positions[:,i,:] # [#frames, 3] (unwrapped coordinates)
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
-
+        print(chain_traj.shape)
 
         """ 1. Average time for a chain to completely flux through the condensate"""
         # Array to store information about chain location in the simulation box
