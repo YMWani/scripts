@@ -348,6 +348,7 @@ if __name__=="__main__":
 
     # Create empty lists/arrays to store data
     flux_times = []
+    num_guest_chains_inside_condensate = [] # List to store the number of guest chains inside the condensate at every timestep
     msd_values = np.zeros((3, 5000)) # [#regions, #frames] NOTE: 5000 frames refer to 500 ns in the simulation (delta_t = 0.1 ns -> 5000*0.1 = 500 ns); 
     # NOTE: We assume the worst case scenario that a chain remains in the same region throughout the simulation
     msd_counter = np.zeros((3, 5000)) # [#regions, #frames]
@@ -377,6 +378,9 @@ if __name__=="__main__":
         mask = (chain_traj_wrapped[:,2] <= args.condensate_bounds[0]) | (chain_traj_wrapped[:,2] >= args.condensate_bounds[1])
         chain_location[mask] = 2 # Dilute phase
         
+        # Determine the number of guest chains inside the condensate at every timestep
+        num_guest_chains_inside_condensate.append(np.sum(chain_location == 1))
+
         # Determine the number of events when a chain starts from the cavity, travels through the condensate and exits to the dilute phase
         count, transition_indices = count_transitions(chain_location)
         
@@ -448,6 +452,20 @@ if __name__=="__main__":
     with open(output_file, "w") as f:
         json.dump(output_data, f, indent=4)
 
+    # Save the number of guest chains inside the condensate at every timestep
+    num_guest_chains_inside_condensate = np.array(num_guest_chains_inside_condensate)
+    avg_num_guest_inside_condensate = np.mean(num_guest_chains_inside_condensate)
+    err_num_guest_inside_condensate = sem(num_guest_chains_inside_condensate)
+    print(f"Average number of guest chains inside the condensate: {avg_num_guest_inside_condensate:.3f} ± {err_num_guest_inside_condensate:.3f}")
+    output_data = {
+        "avg_num_guest_inside_condensate": avg_num_guest_inside_condensate,
+        "err_num_guest_inside_condensate": err_num_guest_inside_condensate,
+        "num_guest_chains_inside_condensate": num_guest_chains_inside_condensate.tolist()
+    }
+    output_file = f"{file_path}/num_guest_chains_inside_condensate.json"
+    with open(output_file, "w") as f:
+        json.dump(output_data, f, indent=4)
+    
     # Process the MSD data
     msd_normalized = np.divide(msd_values, msd_counter, out=np.zeros_like(msd_values), where=msd_counter!=0) # Avoid division by zero
     np.savetxt("msd.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2])), header="Time(tsteps)\tMSD_region1\tMSD_region2\tMSD_region3", fmt="%1.5e")
