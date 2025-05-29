@@ -1981,6 +1981,10 @@ def find_interfaces(coords, avg_profile):
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
                            sigma=sigma_, absolute_sigma=True, maxfev=10000)
     A, x0, sigma, p = popt
+
+    print(initial_guess)
+    print(popt)
+
     P = 2*np.round(p)
     fine_coords = np.linspace(min(coords), max(coords), num=1000)
     fitted_profile = super_gaussian(fine_coords, *popt)
