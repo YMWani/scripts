@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.stats import sem
 import pathlib
 import random
 from generate_sphere import sphere
@@ -1963,7 +1964,18 @@ def find_interfaces(coords, avg_profile):
 
     # fit super gaussian
     super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
-    initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 10]
+    
+    # Initial guess for the parameters: [A, x0, sigma, p]
+    A_guess = np.percentile(avg_profile, 95)  # Amplitude
+    x0_guess = np.mean(coords)  # Center of the Gaussian
+    # Estimate the standard deviation
+    half_max = A_guess / 2.
+    # Find the indices where the avg_profile corsses half_max from both sides
+    indices = np.where(avg_profile >= half_max)[0]
+    print("indices:",indices)
+
+    initial_guess = [A_guess, x0_guess, np.std(coords), 10]
+    
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
                            sigma=sigma_, absolute_sigma=True, maxfev=10000)
     A, x0, sigma, p = popt
