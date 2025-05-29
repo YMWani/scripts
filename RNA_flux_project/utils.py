@@ -1963,7 +1963,7 @@ def find_interfaces(coords, avg_profile):
 
     # fit super gaussian
     super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
-    initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
+    initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 1]
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
                            sigma=sigma_, absolute_sigma=True, maxfev=10000)
     A, x0, sigma, p = popt
@@ -1978,7 +1978,7 @@ def find_interfaces(coords, avg_profile):
     left_interface_coord = fine_coords[np.argmax(first_derivative)]
     right_interface_coord = fine_coords[np.argmin(first_derivative)]
 
-    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile, first_derivative
+    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
 
 def extract_particle_masses(types):
     """
