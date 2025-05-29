@@ -1933,7 +1933,7 @@ def compute_number_density_profile(positions, simBox, bin_width):
     
     return density_profile, bin_centers
 
-def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_low=15, percentile_high=85, min_dilute_size_multiplier=0.3):
+def find_interfaces(coords, avg_profile):
     """
     This function takes averaged density profile for a direct coexistence simulations
     and fits a super gaussian function to the profile. From the derivative of the 
@@ -1963,9 +1963,6 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
 
     # fit super gaussian
     super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
-
-    print(np.percentile(avg_profile, 95))
-
     initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
                            sigma=sigma_, absolute_sigma=True, maxfev=10000)
@@ -1981,7 +1978,7 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
     left_interface_coord = fine_coords[np.argmax(first_derivative)]
     right_interface_coord = fine_coords[np.argmin(first_derivative)]
 
-    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile
+    return left_interface_coord, right_interface_coord, fine_coords, fitted_profile, first_derivative
 
 def extract_particle_masses(types):
     """
