@@ -1971,6 +1971,9 @@ def find_interfaces(coords, avg_profile):
     fine_coords = np.linspace(min(coords), max(coords), num=1000)
     fitted_profile = super_gaussian(fine_coords, *popt)
     
+    print(initial_guess)
+    print(popt)
+
     # Compute first derivative
     first_derivative = np.gradient(fitted_profile, fine_coords)
 
