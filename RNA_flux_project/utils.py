@@ -1972,9 +1972,11 @@ def find_interfaces(coords, avg_profile):
     half_max = A_guess / 2.
     # Find the indices where the avg_profile corsses half_max from both sides
     indices = np.where(avg_profile >= half_max)[0]
-    print("indices:",indices)
+    left_idx = indices[0]
+    right_idx = indices[-1]
+    std_guess = (avg_profile[right_idx] - avg_profile[left_idx]) / 2.
 
-    initial_guess = [A_guess, x0_guess, np.std(coords), 10]
+    initial_guess = [A_guess, x0_guess, std_guess, 5]
     
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
                            sigma=sigma_, absolute_sigma=True, maxfev=10000)
@@ -1983,9 +1985,6 @@ def find_interfaces(coords, avg_profile):
     fine_coords = np.linspace(min(coords), max(coords), num=1000)
     fitted_profile = super_gaussian(fine_coords, *popt)
     
-    print(initial_guess)
-    print(popt)
-
     # Compute first derivative
     first_derivative = np.gradient(fitted_profile, fine_coords)
 
