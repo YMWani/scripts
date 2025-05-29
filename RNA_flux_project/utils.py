@@ -1974,7 +1974,7 @@ def find_interfaces(coords, avg_profile):
     indices = np.where(avg_profile >= half_max)[0]
     left_idx = indices[0]
     right_idx = indices[-1]
-    std_guess = (avg_profile[right_idx] - avg_profile[left_idx]) / 2.
+    std_guess = (coords[right_idx] - coords[left_idx]) / 2.
 
     initial_guess = [A_guess, x0_guess, std_guess, 5]
     
