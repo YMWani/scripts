@@ -1963,6 +1963,9 @@ def find_interfaces(coords, avg_profile, derivative_threshold=1e-5, percentile_l
 
     # fit super gaussian
     super_gaussian = lambda x, A, x0, sigma, p: A*np.exp(-((x-x0)**2/(2.*sigma**2))**p)
+
+    print(np.percentile(avg_profile, 95))
+
     initial_guess = [np.percentile(avg_profile, 95), np.mean(coords), np.std(coords), 2]
     popt, pcov = curve_fit(super_gaussian, coords, avg_profile, p0=initial_guess,
                            sigma=sigma_, absolute_sigma=True, maxfev=10000)
