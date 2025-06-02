@@ -310,7 +310,8 @@ def compute_averaged_density_profile_2(density_prof):
     # Adjust the bin positions such that the COM is at the center of the box (i.e. 0.5)
     bins -= cm - 0.5
     bins[bins < 0] += 1.0
-    
+    bins[bins > 1] -= 1.0
+
     return bins, bin_density_mass, bin_density_number
 
 def compute_COM_positions_multiple_chains(positions, mass):
