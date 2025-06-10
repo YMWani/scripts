@@ -275,6 +275,9 @@ def find_consecutive_ranges(arr):
     Input: [1, 2, 3, 5, 6, 7, 10, 15, 16]
     Output: [(1, 3), (5, 7), (10, 10), (15, 16)]
     """
+    if len(arr) == 0:
+        return []
+
     ranges = []
     
     # Initialize with first element
@@ -379,7 +382,7 @@ if __name__=="__main__":
     print("\nAnalyzing the guest chains")
     for i in tqdm(range(com_positions.shape[1])):
         print(f"\nAnalyzing chain {i+1}")
-        
+
         chain_traj = com_positions[:,i,:] # [#frames, 3] (unwrapped coordinates)
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
         
