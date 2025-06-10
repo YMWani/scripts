@@ -378,7 +378,8 @@ if __name__=="__main__":
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
     print("\nAnalyzing the guest chains")
     for i in tqdm(range(com_positions.shape[1])):
-        # print(f"\nAnalyzing chain {i+1}")
+        print(f"\nAnalyzing chain {i+1}")
+        
         chain_traj = com_positions[:,i,:] # [#frames, 3] (unwrapped coordinates)
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
         
