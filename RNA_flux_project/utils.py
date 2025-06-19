@@ -2274,7 +2274,7 @@ def read_all_timesteps(file_name):
 
 def read_full_trajectory(file_name):
     """
-    Efficiently reads the last frame of a LAMMPS trajectory file to extract positions of all chains.
+    Efficiently reads all the frames of a LAMMPS trajectory file to extract positions of all chains.
     """
     # First pass to determine the number of frames and number of atoms
     num_frames = 0
