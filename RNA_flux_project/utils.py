@@ -996,6 +996,45 @@ def generate_cuboid_cavity(seq, xw, yw, zw):
     
     return positions, atom_types
 
+def generate_cuboid_cavity_with_exact_AA_composition(seq, xw, yw, zw):
+    """
+    Construct a cuboidal shaped cavity where the surfaces along the xy plane are decorated with surface
+    monomers that have a similar A.A. composition as the given protein sequence. 
+    
+    Cavity is centered at origin
+
+    Arguments:
+    - seq (str): Protein sequence whose composition we want to replicate on the cavity
+    - xw, yw, zw (float): Width of the cavity in x, y, and z direction, respectively.
+
+    Output:
+    - positions (float array): Array containing the positions of the surface monomers
+    - types (str list): List containing the atom types of the surface monomers
+    """
+    # 1. Create cavity surface
+    r0 = 3.81 # Equilibrium bond distance for protein chains
+    nx = int(xw/r0) # #segments along x direction
+    rx = xw/nx # distance between monomers in x direction
+    ny = int(yw/r0) # #segments along y direction
+    ry = yw/ny # distance between monomers in x direction
+
+    x_vals = np.linspace(0, xw, nx+1) - xw/2.
+    y_vals = np.linspace(0, yw, ny+1) - yw/2.
+    z_vals = np.repeat(zw/2., (nx+1)*(ny+1))
+    xy_pos = np.array(np.meshgrid(x_vals, y_vals)).T.reshape(-1,2)
+    pos1 = np.column_stack((xy_pos, z_vals)) # Positions for surface z=zw/2.
+    z_vals = np.repeat(-zw/2., (nx+1)*(ny+1))
+    pos2 = np.column_stack((xy_pos, z_vals)) # Positions for surface z=-zw/2.
+    positions = np.concatenate((pos1, pos2)) # Surface monomer positions for both the required faces of cavity
+
+    # 2. Extract A.A. composition of the entered sequence
+    composition, counts = np.unique(list(seq), return_counts=True)
+    
+    atom_types = random.choices(composition, weights=counts, k=positions.shape[0])
+    
+    return positions, atom_types
+
+
 def write_config_cuboid_cavity_with_inner_prot(simBox, cavity_positions, cavity_types,
                                                protein_coords, protein_bond_data,
                                                num_atom_types = 60):
@@ -2448,3 +2487,7 @@ if __name__ == "__main__":
 
     # file_path = "/Users/yw9071_admin/Downloads/guest_chains.lammpstrj"
     # box, coords, tsteps = read_full_trajectory(file_path)
+
+    positions, atom_types = generate_cuboid_cavity_with_exact_AA_composition("YYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYS", 100.0, 100.0, 100.0)
+    print(np.unique(atom_types, return_counts=True))
+    
