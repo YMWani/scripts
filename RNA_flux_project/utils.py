@@ -10,6 +10,9 @@ import random
 from generate_sphere import sphere
 current_dir = pathlib.Path(__file__).resolve().parent
 plt.style.use(f"{current_dir}/../plotting/joseph_group.mplstyle")
+plt.rcParams['text.usetex'] = True
+plt.rcParams['text.latex.preamble'] = '\n'.join([r'\usepackage{sansmath}', r'\sansmath'])
+
 import random
 import pandas as pd
 
@@ -471,6 +474,14 @@ def amino_acid_interaction_strength_dict():
             interaction_strengths[(int(aa1), int(aa2))] = float(strength)
 
     return interaction_strengths
+
+def WF_potential(r, sigma, epsilon, rcut, nu=1.0, mu=2.0):
+    R = 3.*sigma
+
+    alpha = 2. * nu * (R/sigma)**(2.*mu) * ((2.*nu + 1.)/(2. * nu * ((R/sigma)**(2.*mu) - 1.)))**(2.*nu + 1.)
+    V = epsilon * alpha * ((sigma/r)**(2*mu) - 1.) * ((R/r)**(2*mu) - 1.)**(2*nu)
+
+    return V
 
 def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5000):
     """
@@ -2537,5 +2548,73 @@ if __name__ == "__main__":
     # positions, atom_types = generate_cuboid_cavity_with_exact_AA_composition("YYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYS", 100.0, 100.0, 100.0)
     # print(np.unique(atom_types, return_counts=True))
     
-    SHD = compute_SHD("YYSSS"*30)
-    print(SHD)
+    # interaction_strengths = amino_acid_interaction_strength_dict()
+    # matrix = np.zeros((3,3))
+    
+    # for i, aa1 in enumerate([9, 15, 2]):
+    #     for j, aa2 in enumerate([9, 15, 2]):
+    #         if aa2 >= aa1:
+    #             matrix[i,j] = interaction_strengths[(aa1, aa2)]
+    #         else:
+    #             matrix[i,j] = interaction_strengths[(aa2, aa1)]
+    
+    # fig, ax = plt.subplots(figsize=(3.5, 3))
+    # cax = ax.matshow(matrix, cmap='Oranges')
+    # fig.colorbar(cax, label='Interaction Strength')
+    
+    # labels = ["Y", "S", "G"]
+    # ax.set_xticks(np.arange(len(labels)))
+    # ax.set_yticks(np.arange(len(labels)))
+    # ax.set_xticklabels(labels)
+    # ax.set_yticklabels(labels)
+
+    # ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
+
+    # fig.savefig("interaction_matrix_3site_model.pdf", bbox_inches='tight')
+
+    # rvals = np.linspace(3.0, 25.0, 1000)
+    # potential_GG = WF_potential(rvals, 
+    #                          sigma=4.695110240398406, 
+    #                          epsilon=0.096470,
+    #                          rcut=14.085330721195216)
+    # potential_GY = WF_potential(rvals, 
+    #                          sigma=5.7131654456309935, 
+    #                          epsilon=0.257828,
+    #                          rcut=17.139496336892982)
+    # potential_GS = WF_potential(rvals, 
+    #                          sigma=5.052524512175333, 
+    #                          epsilon=0.079035,
+    #                          rcut=15.157573536526)
+    # potential_YY = WF_potential(rvals,
+    #                          sigma=6.733634028253079,
+    #                          epsilon=0.419186,
+    #                          rcut=20.20090208475924)
+    # potential_YS = WF_potential(rvals,
+    #                          sigma=6.068280818635755,
+    #                          epsilon=0.240393,
+    #                          rcut=18.204842455907265)
+    # potential_SS = WF_potential(rvals,
+    #                          sigma=5.412669704115792,
+    #                          epsilon=0.061600,
+    #                          rcut=16.238009112347374)
+
+    # fig, ax = plt.subplots(figsize=(3, 1.75))
+    # ax.plot(rvals/6.733634028253079, potential_GG/0.419186, label='GG')
+    # ax.plot(rvals/6.733634028253079, potential_GY/0.419186, label='GY')
+    # ax.plot(rvals/6.733634028253079, potential_GS/0.419186, label='GS')
+    # ax.plot(rvals/6.733634028253079, potential_YY/0.419186, label='YY')
+    # ax.plot(rvals/6.733634028253079, potential_YS/0.419186, label='YS')
+    # ax.plot(rvals/6.733634028253079, potential_SS/0.419186, label='SS')
+
+    # ax.axhline(0, color="gray", linestyle="dashed", linewidth=1)
+
+    # ax.set_xlim(0.5, 2.5)
+    # ax.set_ylim(-1.0, 1.5)
+
+    # ax.legend(loc="upper right")
+    
+    # ax.set_xlabel(r"$r/\sigma_{\mathrm{YY}}$")
+    # ax.set_ylabel(r"$U(r)/\varepsilon_{\mathrm{YY}}$")
+
+    # fig.savefig("WF_potential_3site_model.pdf", bbox_inches='tight')
+    
