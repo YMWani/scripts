@@ -27,6 +27,17 @@ Steps are as follows:
 6. Compute the mean Rg and mean asphericity of chains inside each bin, over the entire
    trajectory.
 7. Save and plot data.
+
+Input arguments:
+    - path: Directory where the trajectory file is stored
+    - traj_guest: Trajectory file tracking the guest chains only
+    - chain_length: Length of the guest chains
+
+Output:
+    - Rg.dat: File containing the mean radius of gyration of chains inside bins along the long axis direction
+    - asphericity.dat: File containing the mean asphericity of chains inside bins along the long axis direction
+    - Rg.pdf: Plot of mean radius of gyration vs z
+    - asphericity.pdf: Plot of mean asphericity vs z
 """
 
 parser = argparse.ArgumentParser()

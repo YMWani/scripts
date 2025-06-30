@@ -450,7 +450,7 @@ def process_frame_intermolecular(frame_data):
 
 # Read input arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--traj_file", type=str, required=True) # dir where data is stored
+parser.add_argument("--traj_file", type=str, required=True) # trajectory file to read
 parser.add_argument("--stride", type=int, required=True) # process every stride-th frame
 parser.add_argument("--config_file", type=str, required=True) # dir where data is stored
 parser.add_argument("--Nm_host", type=int, required=True) # Number of monomers in host chain
