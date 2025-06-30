@@ -426,6 +426,52 @@ def compute_SCD(seq):
     
     return SCD
 
+def compute_SHD(seq):
+    """
+    Compute sequence hydropathy decoration parameter for a given sequence
+    The equation can be found in this paper: https://doi.org/10.1063/1.5005821 eq.(3)
+    """
+    # Load amino acid dictionary
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        amino_acid_dict = json.load(f)
+    # Load interaction strength dictionary
+    interaction_strengths = amino_acid_interaction_strength_dict()
+
+    N = len(seq) # Length of protein
+    SHD = 0.
+    for i in range(N):
+        for j in range(i,N):
+            if i != j:
+                aa1, aa2 = seq[i], seq[j]
+                aaid1, aaid2 = amino_acid_dict[aa1]["id"], amino_acid_dict[aa2]["id"]
+                if aaid2 >= aaid1:
+                    epsilon = interaction_strengths[(aaid1, aaid2)]
+                else:
+                    epsilon = interaction_strengths[(aaid2, aaid1)]
+                SHD += epsilon * (j-i)**(-0.5)
+    SHD /= N
+
+    return SHD
+
+def amino_acid_interaction_strength_dict():
+    """
+    This function reads the potential.dat file and creates a dictionary containing
+    the interaction strengths for all amino acids using the amino acid id as the key.
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/potentials.dat', 'r') as f:
+        lines = f.readlines()
+
+    interaction_strengths = {}
+    for line in lines:
+        parts = line.strip().split()
+        if len(parts) == 9:
+            aa1, aa2, strength = parts[1], parts[2], parts[4]
+            interaction_strengths[(int(aa1), int(aa2))] = float(strength)
+
+    return interaction_strengths
+
 def gen_EK_sequence_Monte_carlo(N, target_nSCD, tolerance=0.03, max_iterations=5000):
     """
     For a given sequence length N and a target normalized SCD value, this function
@@ -2488,6 +2534,8 @@ if __name__ == "__main__":
     # file_path = "/Users/yw9071_admin/Downloads/guest_chains.lammpstrj"
     # box, coords, tsteps = read_full_trajectory(file_path)
 
-    positions, atom_types = generate_cuboid_cavity_with_exact_AA_composition("YYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYS", 100.0, 100.0, 100.0)
-    print(np.unique(atom_types, return_counts=True))
+    # positions, atom_types = generate_cuboid_cavity_with_exact_AA_composition("YYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYSYYYYS", 100.0, 100.0, 100.0)
+    # print(np.unique(atom_types, return_counts=True))
     
+    SHD = compute_SHD("YYSSS"*30)
+    print(SHD)
