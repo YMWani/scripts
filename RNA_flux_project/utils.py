@@ -1091,7 +1091,7 @@ def generate_cuboid_cavity_with_exact_AA_composition(seq, xw, yw, zw):
     
     return positions, atom_types
 
-def generate_cuboid_cavity_with_exact_AA_composition_2(seq, xw, yw, zw):
+def generate_cuboid_cavity_with_exact_AA_composition_2(seq, xw, yw, zw, spacing=3.81):
     """
     Construct a cuboidal shaped cavity where the surfaces along the xy plane are decorated with surface
     monomers that have a similar A.A. composition as the given protein sequence. 
@@ -1107,7 +1107,7 @@ def generate_cuboid_cavity_with_exact_AA_composition_2(seq, xw, yw, zw):
     - types (str list): List containing the atom types of the surface monomers
     """
     # 1. Create cavity surface
-    r0 = 3.81 * 2 # Equilibrium bond distance for protein chains
+    r0 = spacing # Equilibrium bond distance for protein chains
     nx = int(xw/r0) # #segments along x direction
     rx = xw/nx # distance between monomers in x direction
     ny = int(yw/r0) # #segments along y direction
