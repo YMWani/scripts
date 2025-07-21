@@ -211,7 +211,7 @@ for i in range(num_atoms):
 
 
 # Useful variables
-sampling_interval = 100 # Number of points to sample in the pore size distribution
+sampling_interval = 1000 # Number of points to sample in the pore size distribution
 bin_width = 1.0 # Angstroms
 max_radius = 40.0 # Maximum radius to consider in the pore size distribution (in Angstroms)
 num_bins = int(max_radius / bin_width) # Number of bins in the pore size histogram
