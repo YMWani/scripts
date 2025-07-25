@@ -1732,6 +1732,164 @@ def add_unequilibrated_chains_to_cuboidal_cavity(simBox, system_coords, system_b
     
     configFile.close()
 
+def generate_angle_data(bond_data):
+    """
+    Function to generate angle potential data for the peptides inside the cavity
+
+    Arguments:
+    - position_data (list of tuples): (atom_id, mol_id, atom_type, atom_charge, x, y, z)
+    - bond_data (list of tuples): (bond_id, bond_type, atom_id_1, atom_id_2)
+    - kangle (float): Force constant for angle potential
+    - theta0 (float): Equilibrium angle in degrees
+
+    Returns:
+    - angle_data (list of tuples): Angle data for the peptides
+                                    (angle_id, angle_type, first_atom_id, second_atom_id, third_atom_id)
+    """
+    angle_data = []
+    angle_id_counter = 0
+    angle_type = 1 # Assuming a single type of angle potential
+    
+    # Create angles based on bonds
+    """
+    We iterate through the bond data and find bond pairs that have a common atom and then
+    create an angle between them. The angle is defined by three atoms: the first atom of the first bond,
+    the second atom of the first bond (which is also the first atom of the second bond),
+    and the second atom of the second bond.
+    """
+    for bond in bond_data:
+        bond_id_1, _, first_atom_id_1, second_atom_id_1 = bond
+        # Find all bonds that share the second atom
+        for other_bond in bond_data:
+            if not other_bond[0] == bond_id_1:
+                _, _, first_atom_id_2, second_atom_id_2 = other_bond
+                if second_atom_id_1 == first_atom_id_2:
+                    # We have a common atom, create an angle
+                    angle_id_counter += 1
+                    angle_data.append((angle_id_counter, angle_type, first_atom_id_1, second_atom_id_1, second_atom_id_2))
+
+    return angle_data
+
+def add_unequilibrated_chains_to_cuboidal_cavity_with_angle_potential(simBox, system_coords, system_bond_data,
+                                  cavity_centre_wrapped, cavity_dimensions, seq, nchains, kangle=0.0, theta0=180.0,
+                                  num_atom_types=60):
+    """
+    Function to add RNA/peptide chains inside a cavity contained inside a protein condensate
+
+    Arguments:
+    - simBox (list): Simulation box coordinates
+    - system_coords (tuple list): A list of tuples containing details for each atom of the 
+                                cavity and protein chains
+                                (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - system_bond_data (tuple list): Bond data for the protein chains
+                                    (bond_id, bond_type, first_atom_id, second_atom_id)
+    - cavity_centre_wrapped (float): Centre of the cavity along z direction
+    - cavity_dimensions (list): cavity coordinates
+    - seq (str): Sequence of peptides that go inside the box
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    # Based on cavity coordinates, first determine the position and bond data of the peptides
+    # that go inside the cavity
+    cavity_box = [[cavity_dimensions[0][0] + 1., cavity_dimensions[0][1] - 1.],
+                  [cavity_dimensions[1][0] + 1., cavity_dimensions[1][1] - 1.],
+                  [cavity_dimensions[2][0] + 1., cavity_dimensions[2][1] - 1.]]
+    cavity_peptides_coords, cavity_peptides_bond_data = place_chains_in_confinement(
+                                                        seq, cavity_box, nchains)
+
+    # Add angle potential data for the peptides inside the cavity
+    cavity_peptides_angle_data = generate_angle_data(cavity_peptides_bond_data)
+
+
+    # Start writing config file 
+    configFile = open('config_with_peptides_inside_cavity.dat','w')
+    configFile.write('LAMMPS data file with cuboidal cavity and chains inside cavity\n\n')
+    
+    # Overall data
+    # Note: system_coords contains data for the cavity, inner proteins and outer proteins
+    num_atoms = len(system_coords) + len(cavity_peptides_coords)
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n') # 60 atom types
+
+    # Note: system_bond_data contains bond info. for inner and outer proteins    
+    num_bonds = len(system_bond_data) + len(cavity_peptides_bond_data)
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n') # Bond types remain unchanged
+
+    # Angle data
+    num_angles = len(cavity_peptides_angle_data)
+    configFile.write(f'{num_angles} angles\n')
+    configFile.write('1 angle types\n\n') # Angle types remain unchanged
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+    # Third, assign ids and masses for Amino acids for chains inside cavity 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+40} {value.get('mass')}\n")
+
+    # Particle POSITIONS
+    configFile.write('\nAtoms\n\n')
+
+    # First assign positions of the cavity and condensate proteins (already equilibrated)
+    # We want to recenter the cavity and condensate proteins such that it is centered at
+    # the center of the simulation box
+    # (Here assuming that only box simension in the z direction is changed.)
+    Lz = simBox[2][1]-simBox[2][0]
+    simBox_centre = simBox[2][0] + Lz/2.
+    delta_z = simBox_centre - cavity_centre_wrapped # Needs to be added to the particle positions
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in system_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord+delta_z))
+
+    # Second, assign positions of the peptides inside the cavity
+    # Since the system coordinates are already fixed, we need to adjust the atom_id and mol_id accordingly
+    num_system_atoms = len(system_coords)
+    highest_mol_id = max([t[1] for t in system_coords]) # molid is at index 1
+    # We need to adjust atom_type as well since peptides are generated using atom_types [1,20]
+    # In addition we need to adjust positions of peptides to be inside the cavity
+    for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in cavity_peptides_coords:
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_system_atoms, 
+                                                       mol_id+highest_mol_id,
+                                                       atom_type+40, 
+                                                       atom_charge, xcoord, ycoord, zcoord+Lz/2.))
+
+    # BOND DATA
+    configFile.write('\nBonds\n\n')
+    # System data contains bond data for inner and outer proteins
+    for bond_id, bond_type, first_atom_id, second_atom_id in system_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
+    
+    # Peptides inside cavity
+    # We need to account for the bond_ids and atom_ids
+    highest_system_bond_id = max([t[0] for t in system_bond_data]) # Data can be jumbled up
+    for bond_id, bond_type, first_atom_id, second_atom_id in cavity_peptides_bond_data:
+        configFile.write('%d %d %d %d\n' %(bond_id+highest_system_bond_id,
+                                           bond_type,
+                                           first_atom_id+num_system_atoms,
+                                           second_atom_id+num_system_atoms))
+    
+    # ANGLE DATA
+    configFile.write('\nAngles\n\n')
+    for angle_id, angle_type, first_atom_id, second_atom_id, third_atom_id in cavity_peptides_angle_data:
+        configFile.write('%d %d %d %d %d\n' %(angle_id, angle_type, 
+                                               first_atom_id+num_system_atoms, 
+                                               second_atom_id+num_system_atoms, 
+                                               third_atom_id+num_system_atoms))
+
+    configFile.close()
+
 def write_config_cuboidal_cavity_w_peptides_wo_outer_proteins(simBox, cavity_seq, 
                                                               peptideSeq, nchains, 
                                                               num_atom_types = 60):
