@@ -2144,6 +2144,11 @@ def read_config(file_name):
                 in_bond_section = True
                 continue  # Skip the "Bonds" header
 
+            elif 'Angles' in line:
+                in_angle_section = True
+                in_bond_section = False
+                continue
+
             # Start reading bond data if in the bond section
             if in_bond_section:
                 if len(line.split()) != 4:
@@ -2154,11 +2159,6 @@ def read_config(file_name):
                 first_atom_id = bond_data[2]
                 second_atom_id = bond_data[3]
                 bonds.append((bond_id, bond_type, first_atom_id, second_atom_id))
-
-            elif 'Angles' in line:
-                in_angle_section = True
-                in_bond_section = False
-                continue
 
             # Start reading angle data if in the angle section
             if in_angle_section:
