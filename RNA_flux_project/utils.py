@@ -2437,7 +2437,7 @@ def monte_carlo_insert_single_chain(box_bounds, existing_positions, monomers_per
     print("Failed to insert a polymer chain after max attempts.")
     return []  # Return an empty list if insertion failed
 
-def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_bonds, bond_data):
+def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_bonds, bond_data, angle_data=None):
     """
     Create a config file for a slab simulation given the follwing information:
     - required_box_bounds (list): A list containing the lower and upper bounds of the slab that we want to generate
@@ -2456,6 +2456,9 @@ def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_
     
     num_atom_types = 60 # Our setup requires 3*20 atom types
 
+    if angle_data is not None:
+        num_angles = len(angle_data)
+
     configFile = open(f'{file_name}','w')
     configFile.write('LAMMPS data file for slab of IDP\n\n')
 
@@ -2463,7 +2466,10 @@ def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_
     configFile.write(f'{num_atoms} atoms\n')
     configFile.write(f'{num_atom_types} atom types\n')
     configFile.write(f'{num_bonds} bonds\n')
-    configFile.write('1 bond types\n\n')
+    configFile.write('1 bond types\n')
+    if angle_data is not None:
+        configFile.write(f'{num_angles} angles\n')
+        configFile.write('1 angle types\n\n')
 
     # Simulation box
     configFile.write('%5f   %5f  xlo xhi\n'%(required_box_bounds[0][0],required_box_bounds[0][1]))
@@ -2493,7 +2499,13 @@ def write_config(file_name, required_box_bounds, protein_coords, num_atoms, num_
 
     for bond_id, bond_type, first_atom_id, second_atom_id in bond_data:
         configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
-    
+
+    # Angle data
+    if angle_data is not None:
+        configFile.write('\nAngles\n\n')
+        for angle_id, angle_type, atom1, atom2, atom3 in angle_data:
+            configFile.write('%d %d %d %d %d\n' %(angle_id, angle_type, atom1, atom2, atom3))
+
     # Close file
     configFile.close()    
 
