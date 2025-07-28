@@ -2162,6 +2162,7 @@ def read_config(file_name):
 
             # Start reading angle data if in the angle section
             if in_angle_section:
+                print("Reading angle data...")
                 if len(line.split()) != 5:
                     continue
                 angle_data = [int(x) for x in line.split()]
