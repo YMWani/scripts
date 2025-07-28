@@ -2157,6 +2157,7 @@ def read_config(file_name):
 
             elif 'Angles' in line:
                 in_angle_section = True
+                in_bond_section = False
                 continue
 
             # Start reading angle data if in the angle section
