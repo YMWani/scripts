@@ -2119,6 +2119,9 @@ def read_config(file_name):
     num_bonds = 0
     bonds = []
     in_bond_section = False
+    num_angles = 0
+    angles = []
+    in_angle_section = False
 
     with open(file_name, 'r') as file:
         for line in file:
@@ -2131,6 +2134,10 @@ def read_config(file_name):
             # Read number of bonds
             elif 'bonds' in line and num_bonds == 0:
                 num_bonds = int(line.split()[0])
+
+            # Read number of angles
+            elif 'angles' in line and num_angles == 0:
+                num_angles = int(line.split()[0])
 
             # Read bond information
             elif 'Bonds' in line:
@@ -2148,7 +2155,26 @@ def read_config(file_name):
                 second_atom_id = bond_data[3]
                 bonds.append((bond_id, bond_type, first_atom_id, second_atom_id))
 
-    return num_atoms, num_bonds, bonds
+            elif 'Angles' in line:
+                in_angle_section = True
+                continue
+
+            # Start reading angle data if in the angle section
+            if in_angle_section:
+                if len(line.split()) != 5:
+                    continue
+                angle_data = [int(x) for x in line.split()]
+                angle_id = angle_data[0]
+                angle_type = angle_data[1]
+                first_atom_id = angle_data[2]
+                second_atom_id = angle_data[3]
+                third_atom_id = angle_data[4]
+                angles.append((angle_id, angle_type, first_atom_id, second_atom_id, third_atom_id))
+
+    if num_angles > 0:
+        return num_atoms, num_bonds, bonds, num_angles, angles
+    else:
+        return num_atoms, num_bonds, bonds
 
 def wrap_positions(positions, box_bounds):
     """
