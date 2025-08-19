@@ -22,7 +22,8 @@ Algorithm:
 2. For each mol. id, determine the timesteps at which the guest chain is in the cavity.
     (Binary mask: 1 if the guest chain is in the cavity, 0 otherwise)
     Between two 1s, the guest chain is traversing through the condensate.
-3. In the time time window between two 1s, measure the MSD of the guest chain.
+3. In the time window between two 1s, measure the MSD of the guest chain in different spatial locations within the host.
+NOTE: Only measure MSD when the guest chain is within a region for more than 5 ns.
 4. Repeat for all mol. ids.
 5. Average the MSD over all mol. ids and compute MSD slope.
 """
@@ -372,9 +373,9 @@ if __name__=="__main__":
 
     # Create empty lists/arrays to store data
     flux_times = []
-    msd_values = np.zeros((3, 5000)) # [#regions, #frames] NOTE: 5000 frames refer to 500 ns in the simulation (delta_t = 0.1 ns -> 5000*0.1 = 500 ns); 
+    msd_values = np.zeros((4, 5000)) # [#regions, #frames] NOTE: 5000 frames refer to 500 ns in the simulation (delta_t = 0.1 ns -> 5000*0.1 = 500 ns); 
     # NOTE: We assume the worst case scenario that a chain remains in the same region throughout the simulation
-    msd_counter = np.zeros((3, 5000)) # [#regions, #frames]
+    msd_counter = np.zeros((4, 5000)) # [#regions, #frames]
     msd_timesteps = np.arange(0, 5000*delta_t, delta_t) # [#frames]
 
 
@@ -456,6 +457,21 @@ if __name__=="__main__":
                 msd_.compute(positions=chain_sub_traj)
                 msd_values[2, 0:msd_.msd.shape[0]] += msd_.msd
                 msd_counter[2, 0:msd_.msd.shape[0]] += 1
+
+        # Find the consecutive ranges of slice indices when chain is inside the host condensate
+        consecutive_ranges = find_consecutive_ranges(np.where(slice_indices != 0)[0])
+        for start_idx, end_idx in consecutive_ranges:
+            # Check if the range is long enough (> 5ns)
+            time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
+            if time_ > 5:
+                # extract the trajectory of the chain for the given range
+                chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
+                # compute the MSD for the given range
+                msd_ = freud.msd.MSD()
+                msd_.compute(positions=chain_sub_traj)
+                msd_values[3, 0:msd_.msd.shape[0]] += msd_.msd
+                msd_counter[3, 0:msd_.msd.shape[0]] += 1
+
     
     # Save flux data
     flux_times = np.array(flux_times)
