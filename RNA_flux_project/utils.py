@@ -130,12 +130,13 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     # Place chains in straight lines with the distance between the monomers
     # approximately equal to the eq. bond length
     r0 = 4.0
+    buffer = 2*r0
     # Place the first chain
     mol_id = 1
-    xcoord = min_box
-    ycoord = min_box + r0
-    zcoord = min_box + r0
-    
+    xcoord = min_box + buffer
+    ycoord = min_box + r0 + buffer
+    zcoord = min_box + r0 + buffer
+
     idx = 1
     for aa in sequence1:
         xcoord += r0
@@ -149,9 +150,9 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     
     # Place the second chain
     mol_id = 2
-    xcoord = min_box
-    ycoord = max_box - r0
-    zcoord = max_box - r0
+    xcoord = min_box + buffer
+    ycoord = max_box - r0 - buffer
+    zcoord = max_box - r0 - buffer
 
     for aa in sequence2:
         xcoord += r0
