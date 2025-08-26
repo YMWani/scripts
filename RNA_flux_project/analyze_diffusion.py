@@ -419,9 +419,9 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is in region 1: close to the cavity
         consecutive_ranges = find_consecutive_ranges(np.where(slice_indices == 1)[0])
         for start_idx, end_idx in consecutive_ranges:
-            # Check if the range is long enough (> 5ns)
+            # Check if the range is long enough (> 2ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 5: # if the chain stays in the region for more than 5ns
+            if time_ > 2: # if the chain stays in the region for more than 2ns
                 # extract the trajectory of the chain for the given range
                 chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD for the given range
@@ -433,9 +433,9 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is in region 2: middle of the condensate
         consecutive_ranges = find_consecutive_ranges(np.where(slice_indices == 2)[0])
         for start_idx, end_idx in consecutive_ranges:
-            # Check if the range is long enough (> 5ns)
+            # Check if the range is long enough (> 2ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 5:
+            if time_ > 2:
                 # extract the trajectory of the chain for the given range
                 chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD for the given range
@@ -447,9 +447,9 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is in region 3: close to the dilute phase
         consecutive_ranges = find_consecutive_ranges(np.where(slice_indices == 3)[0])
         for start_idx, end_idx in consecutive_ranges:
-            # Check if the range is long enough (> 5ns)
+            # Check if the range is long enough (> 2ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 5:
+            if time_ > 2:
                 # extract the trajectory of the chain for the given range
                 chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD for the given range
@@ -461,9 +461,9 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when chain is inside the host condensate
         consecutive_ranges = find_consecutive_ranges(np.where(slice_indices != 0)[0])
         for start_idx, end_idx in consecutive_ranges:
-            # Check if the range is long enough (> 5ns)
+            # Check if the range is long enough (> 2ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 5:
+            if time_ > 2:
                 # extract the trajectory of the chain for the given range
                 chain_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD for the given range
