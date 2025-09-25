@@ -193,7 +193,4 @@ if __name__=="__main__":
     # Convert radians to degrees
     theta_avg = np.degrees(theta_avg)
 
-    plt.plot(bin_centers, theta_avg)
-    plt.show()
-
     np.savetxt(f"segment_orientation_vs_z_Nm{Nm}_seg{segment_size}.txt", np.vstack((bin_centers, theta_avg)).T, header="z_center\tavg_theta(degrees)")
