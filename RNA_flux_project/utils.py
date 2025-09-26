@@ -786,11 +786,34 @@ def write_slab_config(file_name,
     for key, value in aa_dict.items():
         configFile.write(f"{value.get('id')} {value.get('mass')}\n")
 
+    # Calculate center of mass of protein coordinates
+    total_x = sum(xcoord for _, _, _, _, xcoord, _, _ in protein_coords)
+    total_y = sum(ycoord for _, _, _, _, _, ycoord, _ in protein_coords)
+    total_z = sum(zcoord for _, _, _, _, _, _, zcoord in protein_coords)
+    
+    com_x = total_x / num_atoms
+    com_y = total_y / num_atoms
+    com_z = total_z / num_atoms
+    
+    # Calculate center of simulation box
+    box_center_x = (required_box_bounds[0][0] + required_box_bounds[0][1]) / 2
+    box_center_y = (required_box_bounds[1][0] + required_box_bounds[1][1]) / 2
+    box_center_z = (required_box_bounds[2][0] + required_box_bounds[2][1]) / 2
+    
+    # Calculate shift needed to center the protein at box center
+    shift_x = box_center_x - com_x
+    shift_y = box_center_y - com_y
+    shift_z = box_center_z - com_z
+    
     # Particle positions
     configFile.write('\nAtoms\n\n')
     
     for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
-        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+        # Apply the shift to center the protein
+        shifted_x = xcoord + shift_x
+        shifted_y = ycoord + shift_y
+        shifted_z = zcoord + shift_z
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, shifted_x, shifted_y, shifted_z))
 
     # Bond data
     configFile.write('\nBonds\n\n')
@@ -799,7 +822,7 @@ def write_slab_config(file_name,
         configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id,second_atom_id))
     
     # Close file
-    configFile.close()    
+    configFile.close()
 
 def gen_seq_based_cavity(seq, diameter, subDiv=4):
     """
