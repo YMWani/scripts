@@ -179,6 +179,149 @@ def gen_mixture_chain_config(sequence1, sequence2, outfile="config.dat"):
     
     out.close()
 
+def gen_mixture_chain_config_with_ratio(sequence1, sequence2, ratio, outfile="config.dat"):
+    """
+    This function creates a LAMMPS config file that contains multiple chains of two sequences
+    based on a specified ratio, placed in straight line configuration throughout the simulation box
+    with proper spacing to avoid overlaps.
+
+    Parameters:
+    - sequence1 (str): The first protein sequence.
+    - sequence2 (str): The second protein sequence.
+    - ratio (float): Ratio of sequence2 to sequence1 (seq2:seq1). 
+                     For example, ratio=2 means 2 chains of seq2 for every 1 chain of seq1.
+    - outfile (string): file name for the output config file.
+    """
+    parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+
+    chain1_length = len(sequence1)
+    chain2_length = len(sequence2)
+    
+    # Calculate number of chains based on ratio
+    # For simplicity, we'll use the smallest integer representation
+    # For example, ratio=2.5 -> 2 seq1 chains, 5 seq2 chains
+    if ratio == int(ratio):
+        num_seq1_chains = 1
+        num_seq2_chains = int(ratio)
+    else:
+        # Convert to fraction and find smallest integer representation
+        from fractions import Fraction
+        frac = Fraction(ratio).limit_denominator(10)  # Limit to reasonable denominators
+        num_seq1_chains = frac.denominator
+        num_seq2_chains = frac.numerator
+    
+    total_chains = num_seq1_chains + num_seq2_chains
+    num_atoms = num_seq1_chains * chain1_length + num_seq2_chains * chain2_length
+    num_bonds = num_seq1_chains * (chain1_length - 1) + num_seq2_chains * (chain2_length - 1)
+    
+    num_atom_types = 20
+
+    out = open(f'{outfile}','w')
+    out.write('LAMMPS data file for IDP with ratio-based chains\n\n')
+    
+    # General parameters
+    out.write(f'{num_atoms} atoms\n')
+    out.write(f'{num_bonds} bonds\n\n')
+    out.write(f'{num_atom_types} atom types\n')
+    out.write('1 bond types\n\n')
+
+    # Simulation box size - scale based on total number of chains and longest chain
+    max_chain_length = max(chain1_length, chain2_length)
+    r0 = 4.0  # equilibrium bond length
+    buffer = 2 * r0
+    
+    # Calculate box size to accommodate all chains with proper spacing
+    # We'll arrange chains in a roughly cubic arrangement
+    chains_per_row = int(np.ceil(total_chains**0.5))
+    chain_spacing = max_chain_length * r0 + 2 * buffer
+    
+    box_size = chains_per_row * chain_spacing + 2 * buffer
+    min_box = 0.0
+    max_box = box_size
+
+    out.write('%5f   %5f  xlo xhi\n'%(min_box, max_box))
+    out.write('%5f   %5f  ylo yhi\n'%(min_box, max_box))
+    out.write('%5f   %5f  zlo zhi\n\n'%(min_box, max_box))
+
+    # Particle masses
+    out.write('Masses\n\n')
+    for key, value in aa_dict.items():
+        out.write(f"{value.get('id')} {value.get('mass')}\n")
+
+    # Create chain arrangement - mix sequences randomly
+    chain_types = ['seq1'] * num_seq1_chains + ['seq2'] * num_seq2_chains
+    random.shuffle(chain_types)
+    
+    # Particle positions
+    out.write('\nAtoms\n\n')
+    
+    atom_id = 1
+    mol_id = 1
+    
+    for chain_idx, chain_type in enumerate(chain_types):
+        # Calculate position for this chain in a grid arrangement
+        row = chain_idx // chains_per_row
+        col = chain_idx % chains_per_row
+        
+        # Starting position for this chain
+        start_x = min_box + buffer + col * chain_spacing
+        start_y = min_box + buffer + row * chain_spacing
+        start_z = min_box + buffer
+        
+        # Select sequence for this chain
+        if chain_type == 'seq1':
+            sequence = sequence1
+        else:
+            sequence = sequence2
+        
+        # Place atoms for this chain
+        xcoord = start_x
+        ycoord = start_y
+        zcoord = start_z
+        
+        for aa in sequence:
+            atom_type = aa_dict[f"{aa}"]["id"]
+            atom_charge = aa_dict[f"{aa}"]["charge"]
+            
+            out.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+            
+            atom_id += 1
+            xcoord += r0  # Move to next position along x-axis
+        
+        mol_id += 1
+    
+    # Bond data
+    out.write('\nBonds\n\n')
+    
+    bond_id = 1
+    bond_type = 1
+    atom_id = 1
+    
+    for chain_idx, chain_type in enumerate(chain_types):
+        # Select sequence for bond calculation
+        if chain_type == 'seq1':
+            chain_length = chain1_length
+        else:
+            chain_length = chain2_length
+        
+        # Write bonds for this chain
+        for i in range(chain_length - 1):
+            out.write('%d %d %d %d\n' %(bond_id, bond_type, atom_id + i, atom_id + i + 1))
+            bond_id += 1
+        
+        atom_id += chain_length
+    
+    out.close()
+    
+    print(f"Created config file '{outfile}' with:")
+    print(f"  - {num_seq1_chains} chains of sequence1 (length {chain1_length})")
+    print(f"  - {num_seq2_chains} chains of sequence2 (length {chain2_length})")
+    print(f"  - Total atoms: {num_atoms}")
+    print(f"  - Total bonds: {num_bonds}")
+    print(f"  - Box size: {box_size:.2f} x {box_size:.2f} x {box_size:.2f}")
+
 def parse_density_profile_file(filename):
     """
     This function reads the density profile file created from LAMMPS simulations using the 
@@ -2852,4 +2995,6 @@ if __name__ == "__main__":
     # ax.set_ylabel(r"$U(r)/\varepsilon_{\mathrm{YY}}$")
 
     # fig.savefig("WF_potential_3site_model.pdf", bbox_inches='tight')
+
+    gen_mixture_chain_config_with_ratio("YYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSSSSSYYSSSS", "FAFAA"*30, 2, outfile="config.dat")
     
