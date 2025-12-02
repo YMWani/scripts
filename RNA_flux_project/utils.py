@@ -870,6 +870,31 @@ def gen_seq_based_cavity(seq, diameter, subDiv=4):
     # We exclude the last element since the particle is at the center of the cavity
     return shape.verts[:-1], atom_types[:-1]
 
+def gen_spherical_cavity_with_exact_AA_composition(seq, diameter, subDiv=4):
+    """
+    construct a spherical cavity of a given diameter based on the discrete particle model such that
+    the surface monomers have similar composition to the given sequence.
+
+    Arguments:
+    - seq (str): Protein sequence whose composition we want to replicate on the cavity
+    - diameter (float): Cavity diameter in Angstroms.
+
+    Output:
+    - positions (float array): Array containing the positions of the surface monomers
+    - types (str list): List containing the atom types of the surface monomers
+    """
+    # 1. Create a discrete particle model sphere 
+    shape = sphere(diameter/2., subDiv)
+    positions = shape.verts[:-1]  # Exclude the center particle
+
+    # 2. Extract A.A. composition of the entered sequence
+    composition, counts = np.unique(list(seq), return_counts=True)
+
+    atom_types = random.choices(composition, weights=counts, k=positions.shape[0])
+
+    return positions, atom_types
+
+
 def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, protein_coords=None,
                         protein_bond_data=None, num_atom_types = 40):
     """
