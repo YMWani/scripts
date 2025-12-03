@@ -895,6 +895,112 @@ def gen_spherical_cavity_with_exact_AA_composition(seq, diameter, subDiv=4):
     return positions, atom_types
 
 
+def write_spherical_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, protein_coords=None,
+                        protein_bond_data=None, num_atom_types = 40):
+    """
+    Create a initial config file for a spherical cavity and a compressed protein slab next to it.
+
+    Arguments:
+    - simBox (float list): List of the lower and upper bounds for the simulation box
+    - cavity_positions (float array): Positions of the monomers of the spherical cavity
+    - cavity_types (char list): List of the atom_types of the surface monomers.
+    - protein_coords (tuple list): A list of tuples containing details for each atom of the protein chains
+                                  (atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord)
+    - protein_bond_data (list of tuples): Bond data for the protein chains
+                                         (bond_id, bond_type, first_atom_id, second_atom_id)
+    
+    Returns: config file for LAMMPS simulation - "spherical_cavity_protein1_config.dat"
+    """
+        parent_dir = Path(__file__).parent
+    with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
+        aa_dict = json.load(f)
+    
+    configFile = open('cavity_protein1_config.dat','w')
+    configFile.write('LAMMPS data file with spherical cavity to hold RNA chains\n\n')
+
+    # Overall data
+    if protein_coords == None:
+        num_atoms = cavity_positions.shape[0]
+    else:
+        num_atoms = cavity_positions.shape[0] + len(protein_coords)
+    configFile.write(f'{num_atoms} atoms\n')
+    configFile.write(f'{num_atom_types} atom types\n')
+    
+    if protein_bond_data == None:
+        num_bonds = 0
+    else:
+        num_bonds = len(protein_bond_data)    
+    configFile.write(f'{num_bonds} bonds\n')
+    configFile.write('1 bond types\n\n')
+
+    # Simulation box
+    configFile.write('%5f   %5f  xlo xhi\n'%(simBox[0][0],simBox[0][1]))
+    configFile.write('%5f   %5f  ylo yhi\n'%(simBox[1][0],simBox[1][1]))
+    configFile.write('%5f   %5f  zlo zhi\n\n'%(simBox[2][0],simBox[2][1]))
+    
+    # Particle masses
+    configFile.write('Masses\n\n')
+    # First assign ids and masses for Amino acids for protein chains 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')} {value.get('mass')}\n")
+    # Second, assign ids and masses for Amino acids for cavity monomers 
+    for key, value in aa_dict.items():
+        configFile.write(f"{value.get('id')+20} {value.get('mass')}\n")
+
+    # Particle positions
+    configFile.write('\nAtoms\n\n')
+
+    # First assign positions of the cavity
+    mol_id = 1 # Let's assign the cavity as mol_id = 1
+    for index, pos in enumerate(cavity_positions):
+        atom_id = index + 1
+        atom_type = aa_dict[cavity_types[index]]["id"] + 20 # Add 20 for cavity monomers
+        atom_charge = aa_dict[cavity_types[index]]["charge"]
+        # By construction, the cavity positions are such that the center of the cavity is at (0.,0.,0.)
+        # We need to recenter it to the center of the new simulation box
+        xcoord = pos[0] + (simBox[0][0] + (simBox[0][1] - simBox[0][0])/2.)
+        ycoord = pos[1] + (simBox[1][0] + (simBox[1][1] - simBox[1][0])/2.)
+        zcoord = pos[2] + (simBox[2][0] + (simBox[2][1] - simBox[2][0])/2.)
+        configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord))
+    
+    # If protein positions are also given, then assign the positions of the proteins as well
+    if protein_coords:
+        # First we need to ensure that the proteins positions are not inside the cavity
+        # Protein coords are read from trajectory file (unwrapped coordinates)
+        # Therefore, we must first wrap the coordinates in the simulation box
+        wrapped_coords = []
+        Lx = simBox[0][1] - simBox[0][0]
+        Ly = simBox[1][1] - simBox[1][0]
+        Lz = simBox[2][1] - simBox[2][0]
+        for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+            xw = xcoord - (xcoord//Lx)*Lx
+            yw = ycoord - (ycoord//Ly)*Ly
+            zw = zcoord - (zcoord//Lz)*Lz
+            wrapped_coords.append([xw, yw, zw])
+        wrapped_coords = np.array(wrapped_coords)
+        # Calculate the shift to place the protein condensate close to the cavity
+        delta_x = (simBox[0][0] + simBox[0][1])/2. - np.mean(wrapped_coords[:,0])
+        delta_y = (simBox[1][0] + simBox[1][1])/2. - np.mean(wrapped_coords[:,1])
+        delta_z = np.max(cavity_positions[:,2]) + Lz/2. - np.min(wrapped_coords[:,2]) + 1.0 # We add a buffer of 1.0 Angstroms
+
+        # Since Cavity is already placed we need to adjust atom_id and mol_id accordingly
+        num_cavity_atoms = cavity_positions.shape[0]
+        for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords:
+            configFile.write('%d %d %d  %f %f  %f  %f\n' %(atom_id+num_cavity_atoms, mol_id+1, atom_type, atom_charge, xcoord+delta_x, ycoord+delta_y, zcoord+delta_z))
+    
+    # Bond data
+    # Only the proteins will have bonds
+    if protein_bond_data:
+        configFile.write('\nBonds\n\n')
+        # Similar to the positions, we need to adjust atom_id here.
+        # No need to worry about bond_id since cavity monomers are not bonded
+        for bond_id, bond_type, first_atom_id, second_atom_id in protein_bond_data:
+            configFile.write('%d %d %d %d\n' %(bond_id,bond_type,first_atom_id+num_cavity_atoms,second_atom_id+num_cavity_atoms))
+    
+    # Close file
+    configFile.close()
+
+
 def write_cavity_with_protein1_config(simBox, cavity_positions, cavity_types, protein_coords=None,
                         protein_bond_data=None, num_atom_types = 40):
     """
