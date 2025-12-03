@@ -911,7 +911,7 @@ def write_spherical_cavity_with_protein1_config(simBox, cavity_positions, cavity
     
     Returns: config file for LAMMPS simulation - "spherical_cavity_protein1_config.dat"
     """
-        parent_dir = Path(__file__).parent
+    parent_dir = Path(__file__).parent
     with open(f'{parent_dir}/amino_acid_dict.json', 'r') as f:
         aa_dict = json.load(f)
     
