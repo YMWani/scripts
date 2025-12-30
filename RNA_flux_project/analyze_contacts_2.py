@@ -584,40 +584,40 @@ sigma_vals = extract_atom_sigma(f"{parent_dir}/potential_60_particle_types.dat")
 # --------------------------------------------------------------
 # Generate intramolecular contact map for each timestep
 # --------------------------------------------------------------
-frames_to_process = []
-for tstep in range(0, num_timesteps, args.stride):
-    frames_to_process.append((tstep,
-                              host_chain_positions[tstep], 
-                              [box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]], 
-                              host_chain_atom_types, 
-                              sigma_vals
-    ))
+# frames_to_process = []
+# for tstep in range(0, num_timesteps, args.stride):
+#     frames_to_process.append((tstep,
+#                               host_chain_positions[tstep], 
+#                               [box[0][1]-box[0][0], box[1][1]-box[1][0], box[2][1]-box[2][0]], 
+#                               host_chain_atom_types, 
+#                               sigma_vals
+#     ))
 
-with Pool(processes=min(cpu_count(), 12)) as pool:
-    results = list(tqdm(pool.imap(process_frame_intramolecular, frames_to_process), 
-                        total=len(frames_to_process), 
-                        desc="Computing intramolecular contact maps"))
+# with Pool(processes=min(cpu_count(), 12)) as pool:
+#     results = list(tqdm(pool.imap(process_frame_intramolecular, frames_to_process), 
+#                         total=len(frames_to_process), 
+#                         desc="Computing intramolecular contact maps"))
 
-# Combine results
-contact_map = sum(results)
-contact_map /= (len(results)*nchain_host*nchain_host)
+# # Combine results
+# contact_map = sum(results)
+# contact_map /= (len(results)*nchain_host*nchain_host)
 
-# Save the contact map to a file
-np.savetxt("contact_map_host-host.dat", contact_map, fmt="%.5e")
+# # Save the contact map to a file
+# np.savetxt("contact_map_host-host.dat", contact_map, fmt="%.5e")
 
 # ----------------------------------------------------------------
 # Plot and save contact map
 # ----------------------------------------------------------------
-fig, ax = plt.subplots(figsize=(12, 12))
+# fig, ax = plt.subplots(figsize=(12, 12))
 
-sns.heatmap(contact_map, cmap="viridis", cbar=True, annot=False, cbar_kws={'label': 'Normalized contact frequency'})
-ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False)
+# sns.heatmap(contact_map, cmap="viridis", cbar=True, annot=False, cbar_kws={'label': 'Normalized contact frequency'})
+# ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False)
 
-ax.set_xlabel("host protein")
-ax.set_ylabel("host protein")
+# ax.set_xlabel("host protein")
+# ax.set_ylabel("host protein")
 
-# plt.tight_layout()
-plt.savefig(f"contact_map_host-host.pdf")
+# # plt.tight_layout()
+# plt.savefig(f"contact_map_host-host.pdf")
 
 
 # --------------------------------------------------------------
