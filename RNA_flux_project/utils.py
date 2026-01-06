@@ -1114,11 +1114,13 @@ def write_spherical_cavity_with_protein1_config_2(simBox, cavity_positions, cavi
     if protein_coords2 is not None:
         # Wrap the coordinates in the simulation box
         wrapped_coords2 = []
+        slab_width = np.max(protein_coords2, axis=0)[6] - np.min(protein_coords2, axis=0)[6]
+        print(slab_width)
         for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords2:
             xw = xcoord - (xcoord//Lx)*Lx
             yw = ycoord - (ycoord//Ly)*Ly
             zw = zcoord - (zcoord//Lz)*Lz
-            wrapped_coords2.append([xw, yw, zw+1.0])
+            wrapped_coords2.append([xw, yw, zw])
         wrapped_coords2 = np.array(wrapped_coords2)
         
         # Calculate the shift to place the second protein slab on negative z side of the cavity
