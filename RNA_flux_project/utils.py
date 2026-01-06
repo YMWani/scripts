@@ -1124,7 +1124,7 @@ def write_spherical_cavity_with_protein1_config_2(simBox, cavity_positions, cavi
         # Calculate the shift to place the second protein slab on negative z side of the cavity
         delta_x2 = (simBox[0][0] + simBox[0][1])/2. - np.mean(wrapped_coords2[:,0])
         delta_y2 = (simBox[1][0] + simBox[1][1])/2. - np.mean(wrapped_coords2[:,1])
-        delta_z2 = np.min(cavity_positions[:,2]) + Lz/2. - np.max(wrapped_coords2[:,2]) - 1.0 - (np.max(wrapped_coords2[:,2]) - np.min(wrapped_coords2[:,2])) # Buffer of 1.0 Angstroms
+        delta_z2 = np.min(cavity_positions[:,2]) + Lz/2. - np.max(wrapped_coords2[:,2]) - 1.0 - (np.max(wrapped_coords2[:,2]) - np.min(wrapped_coords2[:,2])) - 500.0 # Buffer of 1.0 Angstroms
 
         # Write protein 2 atoms
         for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords2:
