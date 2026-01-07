@@ -1093,8 +1093,8 @@ def write_spherical_cavity_with_protein1_config_2(simBox, cavity_positions, cavi
             zw = zcoord - (zcoord//Lz)*Lz
             wrapped_coords1.append([xw, yw, zw])
         wrapped_coords1 = np.array(wrapped_coords1)
-        print( wrapped_coords1[0] )
-        print( protein_coords1[0][4:] )
+        print( wrapped_coords1[1] )
+        print( protein_coords1[1][4:] )
         
 
         # Calculate the shift to place the first protein slab on positive z side of the cavity
