@@ -1093,14 +1093,13 @@ def write_spherical_cavity_with_protein1_config_2(simBox, cavity_positions, cavi
             zw = zcoord - (zcoord//Lz)*Lz
             wrapped_coords1.append([xw, yw, zw])
         wrapped_coords1 = np.array(wrapped_coords1)
-        print( wrapped_coords1[1] )
-        print( protein_coords1[1][4:] )
         
-
         # Calculate the shift to place the first protein slab on positive z side of the cavity
         delta_x1 = (simBox[0][0] + simBox[0][1])/2. - np.mean(wrapped_coords1[:,0])
         delta_y1 = (simBox[1][0] + simBox[1][1])/2. - np.mean(wrapped_coords1[:,1])
-        delta_z1 = np.max(cavity_positions[:,2]) + Lz/2. - np.min(wrapped_coords1[:,2]) + 1.0 # Buffer of 1.0 Angstroms
+        delta_z1 = (simBox[2][0] + simBox[2][1])/2. - np.mean(wrapped_coords1[:,2])
+        
+        # delta_z1 = np.max(cavity_positions[:,2]) + Lz/2. - np.min(wrapped_coords1[:,2]) + 1.0 # Buffer of 1.0 Angstroms
 
         # Write protein 1 atoms
         for atom_id, mol_id, atom_type, atom_charge, xcoord, ycoord, zcoord in protein_coords1:
