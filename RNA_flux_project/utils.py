@@ -1098,7 +1098,9 @@ def write_spherical_cavity_with_protein1_config_2(simBox, cavity_positions, cavi
         delta_x1 = (simBox[0][0] + simBox[0][1])/2. - np.mean(wrapped_coords1[:,0])
         delta_y1 = (simBox[1][0] + simBox[1][1])/2. - np.mean(wrapped_coords1[:,1])
         delta_z1 = (simBox[2][0] + simBox[2][1])/2. - np.mean(wrapped_coords1[:,2])
-        
+        delta_x1 = 0.0
+        delta_y1 = 0.0
+        delta_z1 = 0.0
         # delta_z1 = np.max(cavity_positions[:,2]) + Lz/2. - np.min(wrapped_coords1[:,2]) + 1.0 # Buffer of 1.0 Angstroms
 
         # Write protein 1 atoms
