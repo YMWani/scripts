@@ -1426,8 +1426,8 @@ def write_single_chain_config(sequence, outfile="config.dat"):
 
     mol_id = 1
     xcoord = min_box
-    ycoord = min_box + r0
-    zcoord = min_box + r0
+    ycoord = min_box + (max_box - min_box)/2.0
+    zcoord = min_box + (max_box - min_box)/2.0
     
     idx = 1
     for aa in sequence:
