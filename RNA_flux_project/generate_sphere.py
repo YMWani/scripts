@@ -188,7 +188,7 @@ def write_xyz_file(positions, fname):
 
 if __name__ == "__main__":
     a = 75.
-    subDiv = 4
+    subDiv = 0
     sphere = sphere(a, subDiv)
 
     print(sphere.verts.shape)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     print(np.min(sphere.r0s[:-1]))
     print(np.max(sphere.r0s[:-1]))
     
-    # write_xyz_file(sphere.verts[:-1], "cavity.xyz")
+    write_xyz_file(sphere.verts[:-1], "sphere_0.xyz")
 
     # print(f"For a sphere of radius = {a} and {subDiv} level of discretization, the nearest neighbor distances are: {sphere.r0s} \n")
 

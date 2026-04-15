@@ -1407,7 +1407,7 @@ def write_single_chain_config(sequence, outfile="config.dat"):
 
     # Simulation box size
     min_box = 0.0
-    max_box = chain_length * 6.0
+    max_box = chain_length * 5.0
 
     out.write('%5f   %5f  xlo xhi\n'%(min_box,max_box))
     out.write('%5f   %5f  ylo yhi\n'%(min_box,max_box))
