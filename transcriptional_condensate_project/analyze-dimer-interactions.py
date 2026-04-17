@@ -289,6 +289,16 @@ def compute_sustained_interactions(interaction_energy_maps, energy_threshold=-0.
 
     return sustained_interaction_map
 
+def compute_partition_function(cross_interactions, temperature=298):
+    k_B = 0.001987204 # Boltzmann constant in kcal/(mol*K)
+    beta = 1 / (k_B * temperature)
+    
+    # Compute the partition function for each frame by summing over all pairwise interactions
+    partition_function = np.sum(np.exp(-beta * cross_interactions))
+
+    return partition_function
+
+
 
 
 # -------------------------------------------------------------------------
@@ -334,15 +344,40 @@ if "__main__" == __name__:
     # Compute the pairwise interaction energy map between the two molecules for each frame
     interaction_energy_maps, within_cutoff_tracker = compute_pairwise_interaction_energy_map(molecule_1_positions, molecule_2_positions, molecule_1_types, molecule_2_types, charges, WF_params)
     
-    # for i in range(interaction_energy_maps.shape[0]):
-    #     print(np.max(interaction_energy_maps[i]), np.min(interaction_energy_maps[i]), np.mean(interaction_energy_maps[i]))
-
-    # Compute sustained interactions
-    sustained_interaction_map = compute_sustained_interactions(interaction_energy_maps)
+    # # Compute sustained interactions
+    # sustained_interaction_map = compute_sustained_interactions(interaction_energy_maps)
     
-    # Plot the sustained interaction map
-    fig, ax = plt.subplots(figsize=(8, 7))
-    sns.heatmap(sustained_interaction_map, cmap='viridis', ax=ax)
-    ax.set_xlabel("RNA")
-    ax.set_ylabel("Med1-IDR")
-    fig.savefig("sustained_interaction_map.pdf", dpi=300, bbox_inches='tight')
+    # # Plot the sustained interaction map
+    # fig, ax = plt.subplots(figsize=(8, 7))
+    # sns.heatmap(sustained_interaction_map, cmap='viridis', ax=ax)
+    # ax.set_xlabel("RNA")
+    # ax.set_ylabel("Med1-IDR")
+    # fig.savefig("sustained_interaction_map.pdf", dpi=300, bbox_inches='tight')
+
+    # Using the interaction energy maps, we want to compute the total cross interaction energy between the two molecules for each frame, and plot it as a function of time.
+    total_interaction_energy = np.sum(interaction_energy_maps, axis=(1, 2))
+
+    # block averaging to smooth out the curve
+    block_size = 50
+    block_averages = [np.mean(total_interaction_energy[i:i+block_size]) for i in range(0, total_interaction_energy.shape[0], block_size)]
+    block_timesteps = [np.mean(timesteps[i:i+block_size]) for i in range(0, timesteps.shape[0], block_size)]
+
+    fig, ax = plt.subplots(figsize=(3, 2))
+    # Plot the block averages 
+    ax.plot(block_timesteps, block_averages, lw=1.5, marker='o', markersize=3, markeredgecolor='k', mew=0.5)
+    # Plot the mean as a dashed line
+    ax.axhline(y=np.mean(total_interaction_energy), linestyle='--')    
+    ax.set_xlabel("Timestep")
+    ax.set_ylabel("Cross interaction energy")
+    fig.savefig("cross_interaction_energy_over_time.pdf", dpi=300, bbox_inches='tight')
+
+    # Save cross interaction energy as a numpy file for future analysis
+    np.save("cross_interaction_energy.npy", np.column_stack([timesteps, total_interaction_energy]))
+
+    # Compute the partition function for the cross interactions.
+    # mask = (timesteps > 2e7)
+    # partition_function_masked = compute_partition_function(total_interaction_energy[mask])
+    # free_energy_masked = -0.001987204 * 298 * np.log(partition_function_masked)
+
+    partition_function = compute_partition_function(total_interaction_energy)
+    free_energy = -0.001987204 * 298 * np.log(partition_function)
