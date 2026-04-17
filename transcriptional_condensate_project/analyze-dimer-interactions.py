@@ -381,3 +381,9 @@ if "__main__" == __name__:
 
     partition_function = compute_partition_function(total_interaction_energy)
     free_energy = -0.001987204 * 298 * np.log(partition_function)
+
+    # Write partition function and free energy to a text file
+    with open("partition_function_and_free_energy.txt", "w") as f:
+        f.write(f"Partition function: {partition_function}\n")
+        f.write(f"Free energy: {free_energy} kcal/mol\n")
+    
