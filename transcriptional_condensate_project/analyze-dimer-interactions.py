@@ -233,7 +233,7 @@ def compute_pairwise_interaction_energy_map(mol1_positions, mol2_positions, mol1
 
     within_cutoff_tracker = np.zeros((num_atoms_mol1, num_atoms_mol2), dtype=int)
 
-    for frame in tqdm(range(num_frames), desc="Computing interaction energy maps"):
+    for frame in tqdm(range(num_frames), desc="Computing interaction energy maps", disable=True):
         # Pairwise displacement vectors for all atom pairs in this frame:
         # (n1, 1, 3) - (1, n2, 3) -> (n1, n2, 3)
         r_vec = mol1_positions[frame, :, None, :] - mol2_positions[frame, None, :, :]
