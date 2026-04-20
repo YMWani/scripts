@@ -294,7 +294,7 @@ def compute_partition_function(cross_interactions, temperature=298):
     beta = 1 / (k_B * temperature)
     
     # Compute the partition function for each frame by summing over all pairwise interactions
-    partition_function = np.sum(np.exp(-beta * cross_interactions))
+    partition_function = np.mean(np.exp(-beta * cross_interactions))
 
     return partition_function
 
