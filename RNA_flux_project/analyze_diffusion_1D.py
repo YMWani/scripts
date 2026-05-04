@@ -343,9 +343,9 @@ if __name__=="__main__":
     com_positions_wrapped = wrap_positions_inside_sim_box(com_positions, box_sizes) # wrapped coordinates
 
     # Create empty lists/arrays to store data
-    msd_values = np.zeros((3, 5000)) # [(total, perpendicular, parallel), #frames] 
+    msd_values = np.zeros((5, 5000)) # [(msd_total, msd_x, msd_y, msd_z, msd_xy), #frames] 
     # NOTE: We assume the worst case scenario that a chain remains in the same region throughout the simulation
-    msd_counts = np.zeros((3, 5000)) # [(total, perpendicular, parallel),, #frames]
+    msd_counts = np.zeros((5, 5000)) # [(msd_total, msd_x, msd_y, msd_z, msd_xy), #frames]
     msd_timesteps = np.arange(0, 5000*delta_t, delta_t) # [#frames]
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
@@ -365,7 +365,6 @@ if __name__=="__main__":
         # Find the consecutive ranges of slice indices when the atom is inside the condensate
         consecutive_ranges = find_consecutive_ranges(np.where(slice_indices != 0)[0])
         for start_idx, end_idx in consecutive_ranges:
-            # Check if the range is long enough (> 2ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
             if time_ > 0:
                 # extract the trajectory of the atom for the given range
@@ -377,6 +376,26 @@ if __name__=="__main__":
                 msd_values[0, :msd_.msd.shape[0]] += msd_.msd
                 msd_counts[0, :msd_.msd.shape[0]] += 1
 
+                # Trajectory in the direction perpendicular to the interface (along x-axis)
+                atom_sub_traj_x = np.zeros_like(chain_traj[start_idx:end_idx])
+                atom_sub_traj_x[:,0] = chain_traj[start_idx:end_idx][:,0]
+                atom_sub_traj_x = atom_sub_traj_x.reshape((-1,1,3)) # unwrapped coordinates
+                # compute the MSD in the direction perpendicular to the interface (along x-axis)
+                msd_ = freud.msd.MSD()
+                msd_.compute(positions=atom_sub_traj_x)
+                msd_values[1, :msd_.msd.shape[0]] += msd_.msd
+                msd_counts[1, :msd_.msd.shape[0]] += 1
+
+                # Trajectory in the direction perpendicular to the interface (along y-axis)
+                atom_sub_traj_y = np.zeros_like(chain_traj[start_idx:end_idx])
+                atom_sub_traj_y[:,1] = chain_traj[start_idx:end_idx][:,1]
+                atom_sub_traj_y = atom_sub_traj_y.reshape((-1,1,3)) # unwrapped coordinates
+                # compute the MSD in the direction perpendicular to the interface (along y-axis)
+                msd_ = freud.msd.MSD()
+                msd_.compute(positions=atom_sub_traj_y)
+                msd_values[2, :msd_.msd.shape[0]] += msd_.msd
+                msd_counts[2, :msd_.msd.shape[0]] += 1
+
                 # Trajectory in the direction perpendicular to the interface (along z-axis)
                 atom_sub_traj_z = np.zeros_like(chain_traj[start_idx:end_idx])
                 atom_sub_traj_z[:,2] = chain_traj[start_idx:end_idx][:,2]
@@ -384,8 +403,8 @@ if __name__=="__main__":
                 # compute the MSD in the direction perpendicular to the interface (along z-axis)
                 msd_ = freud.msd.MSD()
                 msd_.compute(positions=atom_sub_traj_z)
-                msd_values[1, :msd_.msd.shape[0]] += msd_.msd
-                msd_counts[1, :msd_.msd.shape[0]] += 1
+                msd_values[3, :msd_.msd.shape[0]] += msd_.msd
+                msd_counts[3, :msd_.msd.shape[0]] += 1
 
                 # Trajectory in the direction parallel to the interface (along x and y axes)
                 atom_sub_traj_xy = np.zeros_like(chain_traj[start_idx:end_idx])
@@ -395,9 +414,10 @@ if __name__=="__main__":
                 # compute the MSD in the direction parallel to the interface (along x and y axes)
                 msd_ = freud.msd.MSD()
                 msd_.compute(positions=atom_sub_traj_xy)
-                msd_values[2, :msd_.msd.shape[0]] += msd_.msd
-                msd_counts[2, :msd_.msd.shape[0]] += 1
+                msd_values[4, :msd_.msd.shape[0]] += msd_.msd
+                msd_counts[4, :msd_.msd.shape[0]] += 1
 
     # Process the MSD data
     msd_normalized = np.divide(msd_values, msd_counts, out=np.zeros_like(msd_values), where=msd_counts!=0) # Avoid division by zero
-    np.savetxt("msd_with_components.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2])), header="Time(ns)\tMSD(total)\tMSD(perpendicular)\tMSD(parallel)", fmt="%1.5e")
+    np.savetxt("msd_with_components.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2], msd_normalized[3], msd_normalized[4])), 
+               header="Time(ns)\tMSD(total)\tMSD(perpendicular_x)\tMSD(perpendicular_y)\tMSD(perpendicular_z)\tMSD(parallel)", fmt="%1.5e")
