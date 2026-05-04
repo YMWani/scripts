@@ -367,7 +367,7 @@ if __name__=="__main__":
         for start_idx, end_idx in consecutive_ranges:
             # Check if the range is long enough (> 2ns)
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 2:
+            if time_ > 0:
                 # extract the trajectory of the atom for the given range
                 # Entire trajectory (total MSD)
                 atom_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
