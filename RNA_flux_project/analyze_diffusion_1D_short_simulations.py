@@ -304,22 +304,8 @@ if __name__=="__main__":
     print(f"Extracting data from trajectory file.")
     timesteps, box_sizes, num_atoms, atom_positions, atom_types, mol_ids = read_lammps_trajectory(f"{file_path}/{traj}", Nm)
     
-    # NOTE: By design the trajectory file contains frames just before and after the MC move.
-    # Therefore the two frames are identical except for the chains that were involved in the MC move. 
-    # We can remove the frames which are basically at the same timestep.
-    # Let's remove the frame at every timestep=0
-    mask_tstep = np.where(timesteps == 0)[0]
-    timesteps = np.delete(timesteps, mask_tstep)
-    atom_positions = np.delete(atom_positions, mask_tstep, axis=0)
-    mol_ids = np.delete(mol_ids, mask_tstep, axis=0)
-
-    # Get the actual timesteps
-    actual_timesteps = []
     delta_t = timesteps[1] - timesteps[0]
-    for i in range(len(timesteps)):
-        actual_timesteps.append(i * delta_t)
-    actual_timesteps = np.array(actual_timesteps)
-
+    
     numFrames = len(timesteps)
 
     print(f"\nTrajectory file details:")
@@ -336,12 +322,13 @@ if __name__=="__main__":
                                           Nm,
                                           atom_positions.shape[2])) # [#frames, #chains, #atoms-per-chain, 3]
 
+
     # Get the mass of chain monomers using particle types
     chain_masses = extract_particle_masses(atom_types)
     
     com_positions = compute_COM_positions(atom_positions_reshaped, chain_masses) # unwrapped coordinates
     com_positions_wrapped = wrap_positions_inside_sim_box(np.copy(com_positions), box_sizes) # wrapped coordinates
-
+    
     # Create empty lists/arrays to store data
     msd_values = np.zeros((5, 5000)) # [(msd_total, msd_x, msd_y, msd_z, msd_xy), #frames] 
     # NOTE: We assume the worst case scenario that a chain remains in the same region throughout the simulation
@@ -355,7 +342,7 @@ if __name__=="__main__":
 
         chain_traj = com_positions[:,i,:] # [#frames, 3] (unwrapped coordinates)
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
-
+        
         # Determine the slice indices of the atom trajectory
         delta_z = np.abs((args.condensate_bounds[1] - args.cavity_bounds[1]) / 3)
         slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
@@ -375,37 +362,41 @@ if __name__=="__main__":
                 msd_.compute(positions=atom_sub_traj)
                 msd_values[0, :msd_.msd.shape[0]] += msd_.msd
                 msd_counts[0, :msd_.msd.shape[0]] += 1
-
-                # Trajectory in the direction perpendicular to the interface (along x-axis)
+                
+                
+                # Trajectory along x-axis
                 atom_sub_traj_x = np.zeros_like(chain_traj[start_idx:end_idx])
                 atom_sub_traj_x[:,0] = chain_traj[start_idx:end_idx][:,0]
                 atom_sub_traj_x = atom_sub_traj_x.reshape((-1,1,3)) # unwrapped coordinates
-                # compute the MSD in the direction perpendicular to the interface (along x-axis)
+                # compute the MSD along x-axis
                 msd_ = freud.msd.MSD()
                 msd_.compute(positions=atom_sub_traj_x)
                 msd_values[1, :msd_.msd.shape[0]] += msd_.msd
                 msd_counts[1, :msd_.msd.shape[0]] += 1
-
-                # Trajectory in the direction perpendicular to the interface (along y-axis)
+                
+                
+                # Trajectory along y-axis
                 atom_sub_traj_y = np.zeros_like(chain_traj[start_idx:end_idx])
                 atom_sub_traj_y[:,1] = chain_traj[start_idx:end_idx][:,1]
                 atom_sub_traj_y = atom_sub_traj_y.reshape((-1,1,3)) # unwrapped coordinates
-                # compute the MSD in the direction perpendicular to the interface (along y-axis)
+                # compute the MSD along y-axis
                 msd_ = freud.msd.MSD()
                 msd_.compute(positions=atom_sub_traj_y)
                 msd_values[2, :msd_.msd.shape[0]] += msd_.msd
                 msd_counts[2, :msd_.msd.shape[0]] += 1
-
-                # Trajectory in the direction perpendicular to the interface (along z-axis)
+                
+                
+                # Trajectory along z-axis
                 atom_sub_traj_z = np.zeros_like(chain_traj[start_idx:end_idx])
                 atom_sub_traj_z[:,2] = chain_traj[start_idx:end_idx][:,2]
                 atom_sub_traj_z = atom_sub_traj_z.reshape((-1,1,3)) # unwrapped coordinates
-                # compute the MSD in the direction perpendicular to the interface (along z-axis)
+                # compute the MSD along z-axis
                 msd_ = freud.msd.MSD()
                 msd_.compute(positions=atom_sub_traj_z)
                 msd_values[3, :msd_.msd.shape[0]] += msd_.msd
                 msd_counts[3, :msd_.msd.shape[0]] += 1
-
+                
+                
                 # Trajectory in the direction parallel to the interface (along x and y axes)
                 atom_sub_traj_xy = np.zeros_like(chain_traj[start_idx:end_idx])
                 atom_sub_traj_xy[:,0] = chain_traj[start_idx:end_idx][:,0]
@@ -420,4 +411,5 @@ if __name__=="__main__":
     # Process the MSD data
     msd_normalized = np.divide(msd_values, msd_counts, out=np.zeros_like(msd_values), where=msd_counts!=0) # Avoid division by zero
     np.savetxt("msd_with_components.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2], msd_normalized[3], msd_normalized[4])), 
-               header="Time(ns)\tMSD(total)\tMSD(perpendicular_x)\tMSD(perpendicular_y)\tMSD(perpendicular_z)\tMSD(parallel)", fmt="%1.5e")
+               header="Time(ns)\tMSD(total)\tMSD_x\tMSD_y\tMSD_z\tMSD_xy", fmt="%1.5e")
+    
