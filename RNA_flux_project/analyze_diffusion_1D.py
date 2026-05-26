@@ -25,6 +25,7 @@ parser.add_argument("--traj_guest", type=str, required=True) # trajectory file t
 parser.add_argument("--chain_length", type=int, required=True) # Length of the guest chains
 parser.add_argument("--cavity_bounds", type=float, nargs=2, required=True) # Cavity bounds in z-direction
 parser.add_argument("--condensate_bounds", type=float, nargs=2, required=True) # Condensate bounds in z-direction
+parser.add_argument("--buffer", type=float, default=0.0) # Buffer distance subtracted from each condensate boundary edge
 args = parser.parse_args()
 
 def read_lammps_trajectory(file_path, chain_length):
@@ -262,9 +263,13 @@ def find_consecutive_ranges(arr):
     
     return ranges
 
-def determine_slice(cavity, delta_z, atom_pos):
+def determine_slice(cavity, delta_z_lower, delta_z_upper, atom_pos):
     """
     Determine the slice of the condensate region that a given chain is in at every timestep.
+    
+    The condensate is divided into 3 equal slices on each side of the cavity using
+    separate delta_z values for the lower and upper halves, since the condensate
+    may not be symmetric around the cavity.
     """
     # Empty array to store the slice index for each timestep
     # 1: Close to the cavity, 2: Middle of the condensate, 3: Close to the dilute phase
@@ -272,21 +277,21 @@ def determine_slice(cavity, delta_z, atom_pos):
     slice_indices = np.zeros(atom_pos.shape[0], dtype=int)
 
     # Region 1: Close to the cavity
-    mask = (atom_pos[:,2] <= cavity[0]) & (atom_pos[:,2] >= cavity[0]-delta_z)
+    mask = (atom_pos[:,2] <= cavity[0]) & (atom_pos[:,2] >= cavity[0]-delta_z_lower)
     slice_indices[mask] = 1
-    mask = (atom_pos[:,2] >= cavity[1]) & (atom_pos[:,2] <= cavity[1]+delta_z)
+    mask = (atom_pos[:,2] >= cavity[1]) & (atom_pos[:,2] <= cavity[1]+delta_z_upper)
     slice_indices[mask] = 1
 
     # Region 2: Middle of the condensate
-    mask = (atom_pos[:,2] <= cavity[0]-delta_z) & (atom_pos[:,2] >= cavity[0]-2*delta_z)
+    mask = (atom_pos[:,2] <= cavity[0]-delta_z_lower) & (atom_pos[:,2] >= cavity[0]-2*delta_z_lower)
     slice_indices[mask] = 2
-    mask = (atom_pos[:,2] >= cavity[1]+delta_z) & (atom_pos[:,2] <= cavity[1]+2*delta_z)
+    mask = (atom_pos[:,2] >= cavity[1]+delta_z_upper) & (atom_pos[:,2] <= cavity[1]+2*delta_z_upper)
     slice_indices[mask] = 2
 
     # Region 3: Close to the dilute phase
-    mask = (atom_pos[:,2] <= cavity[0]-2*delta_z) & (atom_pos[:,2] >= cavity[0]-3*delta_z)
+    mask = (atom_pos[:,2] <= cavity[0]-2*delta_z_lower) & (atom_pos[:,2] >= cavity[0]-3*delta_z_lower)
     slice_indices[mask] = 3
-    mask = (atom_pos[:,2] >= cavity[1]+2*delta_z) & (atom_pos[:,2] <= cavity[1]+3*delta_z)
+    mask = (atom_pos[:,2] >= cavity[1]+2*delta_z_upper) & (atom_pos[:,2] <= cavity[1]+3*delta_z_upper)
     slice_indices[mask] = 3
 
     return slice_indices
@@ -357,8 +362,14 @@ if __name__=="__main__":
         chain_traj_wrapped = com_positions_wrapped[:,i,:] # (wrapped coordinates)
 
         # Determine the slice indices of the atom trajectory
-        delta_z = np.abs((args.condensate_bounds[1] - args.cavity_bounds[1]) / 3)
-        slice_indices = determine_slice(args.cavity_bounds, delta_z, chain_traj_wrapped)
+        # Apply buffer to shrink the effective condensate region away from both edges
+        effective_condensate_bounds = [args.condensate_bounds[0] + args.buffer, 
+                                       args.condensate_bounds[1] - args.buffer]
+        # Compute separate delta_z for each side since the condensate may not be
+        # symmetric around the cavity
+        delta_z_lower = np.abs((args.cavity_bounds[0] - effective_condensate_bounds[0]) / 3)
+        delta_z_upper = np.abs((effective_condensate_bounds[1] - args.cavity_bounds[1]) / 3)
+        slice_indices = determine_slice(args.cavity_bounds, delta_z_lower, delta_z_upper, chain_traj_wrapped)
         # slice_indices = 0 (outside condensate (cavity/dilute phase)), 1 (close to cavity), 2 (middle of condensate), 3 (close to dilute phase)
         # NOTE: The use of slice indices is optional here. We do it since the code is partially copied from the diffusion analysis of the chains.
 
@@ -368,8 +379,10 @@ if __name__=="__main__":
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
             if time_ > 0:
                 # extract the trajectory of the atom for the given range
+                raw_sub_traj = chain_traj[start_idx:end_idx+1] - chain_traj[start_idx] # (N,3), centered
+                
                 # Entire trajectory (total MSD)
-                atom_sub_traj = chain_traj[start_idx:end_idx].reshape((-1,1,3)) # unwrapped coordinates
+                atom_sub_traj = raw_sub_traj.reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD for the given range
                 msd_ = freud.msd.MSD()
                 msd_.compute(positions=atom_sub_traj)
@@ -377,8 +390,8 @@ if __name__=="__main__":
                 msd_counts[0, :msd_.msd.shape[0]] += 1
 
                 # Trajectory in the direction perpendicular to the interface (along x-axis)
-                atom_sub_traj_x = np.zeros_like(chain_traj[start_idx:end_idx])
-                atom_sub_traj_x[:,0] = chain_traj[start_idx:end_idx][:,0]
+                atom_sub_traj_x = np.zeros_like(raw_sub_traj)
+                atom_sub_traj_x[:,0] = raw_sub_traj[:,0]
                 atom_sub_traj_x = atom_sub_traj_x.reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD in the direction perpendicular to the interface (along x-axis)
                 msd_ = freud.msd.MSD()
@@ -387,8 +400,8 @@ if __name__=="__main__":
                 msd_counts[1, :msd_.msd.shape[0]] += 1
 
                 # Trajectory in the direction perpendicular to the interface (along y-axis)
-                atom_sub_traj_y = np.zeros_like(chain_traj[start_idx:end_idx])
-                atom_sub_traj_y[:,1] = chain_traj[start_idx:end_idx][:,1]
+                atom_sub_traj_y = np.zeros_like(raw_sub_traj)
+                atom_sub_traj_y[:,1] = raw_sub_traj[:,1]
                 atom_sub_traj_y = atom_sub_traj_y.reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD in the direction perpendicular to the interface (along y-axis)
                 msd_ = freud.msd.MSD()
@@ -397,8 +410,8 @@ if __name__=="__main__":
                 msd_counts[2, :msd_.msd.shape[0]] += 1
 
                 # Trajectory in the direction perpendicular to the interface (along z-axis)
-                atom_sub_traj_z = np.zeros_like(chain_traj[start_idx:end_idx])
-                atom_sub_traj_z[:,2] = chain_traj[start_idx:end_idx][:,2]
+                atom_sub_traj_z = np.zeros_like(raw_sub_traj)
+                atom_sub_traj_z[:,2] = raw_sub_traj[:,2]
                 atom_sub_traj_z = atom_sub_traj_z.reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD in the direction perpendicular to the interface (along z-axis)
                 msd_ = freud.msd.MSD()
@@ -407,9 +420,9 @@ if __name__=="__main__":
                 msd_counts[3, :msd_.msd.shape[0]] += 1
 
                 # Trajectory in the direction parallel to the interface (along x and y axes)
-                atom_sub_traj_xy = np.zeros_like(chain_traj[start_idx:end_idx])
-                atom_sub_traj_xy[:,0] = chain_traj[start_idx:end_idx][:,0]
-                atom_sub_traj_xy[:,1] = chain_traj[start_idx:end_idx][:,1]
+                atom_sub_traj_xy = np.zeros_like(raw_sub_traj)
+                atom_sub_traj_xy[:,0] = raw_sub_traj[:,0]
+                atom_sub_traj_xy[:,1] = raw_sub_traj[:,1]
                 atom_sub_traj_xy = atom_sub_traj_xy.reshape((-1,1,3)) # unwrapped coordinates
                 # compute the MSD in the direction parallel to the interface (along x and y axes)
                 msd_ = freud.msd.MSD()
@@ -420,4 +433,4 @@ if __name__=="__main__":
     # Process the MSD data
     msd_normalized = np.divide(msd_values, msd_counts, out=np.zeros_like(msd_values), where=msd_counts!=0) # Avoid division by zero
     np.savetxt("msd_with_components.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2], msd_normalized[3], msd_normalized[4])), 
-               header="Time(ns)\tMSD(total)\tMSD(perpendicular_x)\tMSD(perpendicular_y)\tMSD(perpendicular_z)\tMSD(parallel)", fmt="%1.5e")
+               header="Time(ns)\tMSD(total)\tMSD_x\tMSD_y\tMSD_z\tMSD_xy", fmt="%1.5e")
