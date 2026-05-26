@@ -375,7 +375,7 @@ if __name__=="__main__":
                 # Centering is required to avoid catastrophic cancellation in freud's FFT-based
                 # MSD algorithm when positions have large absolute values (LAMMPS unwrapped coords).
                 # Subtracting a constant offset does not change MSD: |(r+c)-(r'+c)|^2 = |r-r'|^2
-                raw_sub_traj = chain_traj[start_idx:end_idx] - chain_traj[start_idx] # (N, 3), centered
+                raw_sub_traj = chain_traj[start_idx:end_idx+1] - chain_traj[start_idx] # (N, 3), centered
 
                 # Entire trajectory (total MSD)
                 atom_sub_traj = raw_sub_traj.reshape((-1,1,3))
