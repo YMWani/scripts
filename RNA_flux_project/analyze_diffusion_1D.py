@@ -377,7 +377,7 @@ if __name__=="__main__":
         consecutive_ranges = find_consecutive_ranges(np.where(slice_indices != 0)[0])
         for start_idx, end_idx in consecutive_ranges:
             time_ = (end_idx - start_idx)*delta_t/1e5 # in ns
-            if time_ > 0:
+            if time_ > 1: # Only consider the trajectory segments where the chain remains in the condensate for at least 1 ns
                 # extract the trajectory of the atom for the given range
                 raw_sub_traj = chain_traj[start_idx:end_idx+1] - chain_traj[start_idx] # (N,3), centered
                 
