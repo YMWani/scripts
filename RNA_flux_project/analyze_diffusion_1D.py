@@ -352,6 +352,7 @@ if __name__=="__main__":
     # NOTE: We assume the worst case scenario that a chain remains in the same region throughout the simulation
     msd_counts = np.zeros((5, 5000)) # [(msd_total, msd_x, msd_y, msd_z, msd_xy), #frames]
     msd_timesteps = np.arange(0, 5000*delta_t, delta_t) # [#frames]
+    flux_times = []
 
     # NOTE: Every index in com_positions on axis 1 corresponds to a unique chain
     print("\nAnalyzing the guest chains")
@@ -430,7 +431,43 @@ if __name__=="__main__":
                 msd_values[4, :msd_.msd.shape[0]] += msd_.msd
                 msd_counts[4, :msd_.msd.shape[0]] += 1
 
+        # Compute flux times
+        # 0: Cavity
+        # 1: Condensate
+        # 2: Dilute phase
+        chain_location = np.zeros(numFrames, dtype=int)
+        
+        mask = ((chain_traj_wrapped[:,2] >= args.condensate_bounds[0]) & (chain_traj_wrapped[:,2] <= args.cavity_bounds[0]))
+        chain_location[mask] = 1 # Condensate
+        mask = ((chain_traj_wrapped[:,2] >= args.cavity_bounds[1]) & (chain_traj_wrapped[:,2] <= args.condensate_bounds[1])) 
+        chain_location[mask] = 1 # Condensate
+        
+        mask = (chain_traj_wrapped[:,2] <= args.condensate_bounds[0]) | (chain_traj_wrapped[:,2] >= args.condensate_bounds[1])
+        chain_location[mask] = 2 # Dilute phase
+        
+        # Determine the number of events when a chain starts from the cavity, travels through the condensate and exits to the dilute phase
+        count, transition_indices = count_transitions(chain_location)
+        
+        for start_idx, end_idx in transition_indices:
+            flux_times.append(actual_timesteps[end_idx] - actual_timesteps[start_idx])
+        
+
     # Process the MSD data
     msd_normalized = np.divide(msd_values, msd_counts, out=np.zeros_like(msd_values), where=msd_counts!=0) # Avoid division by zero
     np.savetxt("msd_with_components.dat", np.column_stack((msd_timesteps, msd_normalized[0], msd_normalized[1], msd_normalized[2], msd_normalized[3], msd_normalized[4])), 
                header="Time(ns)\tMSD(total)\tMSD_x\tMSD_y\tMSD_z\tMSD_xy", fmt="%1.5e")
+
+    # Save the flux times
+    flux_times = np.array(flux_times)
+    avg_flux_time = np.mean(flux_times)
+    err_flux_time = sem(flux_times)
+    print(f"Average time for a complete flux for a chain: {avg_flux_time/1e5:.3f} ± {err_flux_time/1e5:.3f} ns")
+    # Save the flux times to a file
+    output_data = {
+        "avg_flux_time (ns)": avg_flux_time/1e5,
+        "err_flux_time (ns)": err_flux_time/1e5,
+        "flux_times": flux_times.tolist()
+    }
+    output_file = f"{file_path}/flux_times.json"
+    with open(output_file, "w") as f:
+        json.dump(output_data, f, indent=4)
