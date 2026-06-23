@@ -276,7 +276,7 @@ if __name__=="__main__":
 
     # Wrap COM positions inside simulation box to histogram data
     print(f"Wrapping atom and center of mass positions.")
-    COM_wrapped = wrap_positions_inside_sim_box(COM_positions, box_sizes)
+    COM_wrapped = wrap_positions_inside_sim_box(np.copy(COM_positions), box_sizes)
 
     """
     With the information about chain COMs and Rgs at every timestep/frame,
