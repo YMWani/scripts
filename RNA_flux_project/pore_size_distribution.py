@@ -193,7 +193,7 @@ sampling_space = np.array(args.sampling_space, dtype=float)
 # Dictionary containing particle radii
 # Read potentials.dat file to extract particle radii
 particle_radii = {}
-with open(f"{current_dir}/potentials_60_particle_types.dat", 'r') as f:
+with open(f"{current_dir}/potential_60_particle_types.dat", 'r') as f:
     lines = f.readlines()
     for line in lines:
         parts = line.split()
@@ -219,7 +219,7 @@ num_bins = int(max_radius / bin_width) # Number of bins in the pore size histogr
 histogram_data = []
 
 # Iterate over different frames
-for frame_idx in tqdm(range(timesteps.shape[0])):
+for frame_idx in tqdm(range(0, timesteps.shape[0], 10)):
     # Analyze frame <frame_idx>
     particle_positions = atom_positions[frame_idx, :, :]  # Get positions of all particles in the frame
 
