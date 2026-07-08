@@ -193,7 +193,7 @@ sampling_space = np.array(args.sampling_space, dtype=float)
 # Dictionary containing particle radii
 # Read potentials.dat file to extract particle radii
 particle_radii = {}
-with open(f"{current_dir}/potentials.dat", 'r') as f:
+with open(f"{current_dir}/potentials_60_particle_types.dat", 'r') as f:
     lines = f.readlines()
     for line in lines:
         parts = line.split()
