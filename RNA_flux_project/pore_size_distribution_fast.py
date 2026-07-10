@@ -349,8 +349,11 @@ def main():
 
     rng = np.random.default_rng()
 
+    # Select uniformly spaced frames to analyze (total 100 frames)
+    frame_indices_to_analyze = np.linspace(0, timesteps.shape[0] - 1, 100, dtype=int)
+
     # Iterate over different frames
-    for frame_idx in tqdm(range(0, timesteps.shape[0], 10)):
+    for frame_idx in tqdm(frame_indices_to_analyze):
         # Analyze frame <frame_idx>
         particle_positions = atom_positions[frame_idx, :, :]  # Get positions of all particles in the frame
 
