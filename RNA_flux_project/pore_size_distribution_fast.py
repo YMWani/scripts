@@ -305,6 +305,27 @@ def optimize_points_parallel(points, positions, radius, bounds, num_workers):
                  initargs=(positions, radius, bounds)) as pool:
         return pool.map(_optimize_one_point, points, chunksize=max(1, len(points) // (num_workers * 4)))
 
+def wrap_positions_inside_sim_box(positions, simBox):
+    """
+    wrap positions inside simulation box.
+    NOTE: Assuming simulation box with the origin at the lower left vertex
+    
+    Arguments:
+    - positions (3d numpy array): [#frames, #chains, 3] / [#frames, #atoms, 3]
+    - simBox (2d numpy array): [[xmin,xmax] [ymin,ymax] [zmin,zmax]]
+    """
+    # Simulation box sizes in all directions
+    Lx = simBox[0][1] - simBox[0][0] 
+    Ly = simBox[1][1] - simBox[1][0]
+    Lz = simBox[2][1] - simBox[2][0]
+    for frame_pos in positions:
+        for r in frame_pos:
+            r[0] -= np.floor(r[0]/Lx)*Lx
+            r[1] -= np.floor(r[1]/Ly)*Ly
+            r[2] -= np.floor(r[2]/Lz)*Lz
+    return positions
+
+
 
 def main():
     # Read input arguments
@@ -315,9 +336,17 @@ def main():
                          help="Number of worker processes for the sphere optimization (default: cpu_count - 1)")
     args = parser.parse_args()
 
-    # Read the trajectory file (NOTE: wrapped positions)
+    # Read the trajectory file
     timesteps, box_sizes, num_atoms, atom_positions, atom_types, mol_ids, atom_ids = read_lammps_trajectory(args.traj_file)
     sampling_space = np.array(args.sampling_space, dtype=float)
+    
+    # Determine if the trajectory is wrapped or unwrapped based on the box sizes and positions
+    is_unwrapped = np.any(atom_positions[:, 0] < box_sizes[0, 0]) or np.any(atom_positions[:, 0] > box_sizes[0, 1]) or np.any(atom_positions[:, 1] < box_sizes[1, 0]) or np.any(atom_positions[:, 1] > box_sizes[1, 1]) or np.any(atom_positions[:, 2] < box_sizes[1, 0]) or np.any(atom_positions[:, 2] > box_sizes[1, 1])
+
+    # If unwrapped, we need to wrap the positions back into the box for analysis.
+    if is_unwrapped:
+        print("Trajectory is unwrapped. Wrapping positions back into the simulation box for analysis.")
+        atom_positions = wrap_positions_inside_sim_box(atom_positions, box_sizes)
 
     # Dictionary containing particle radii
     # Read potentials.dat file to extract particle radii
