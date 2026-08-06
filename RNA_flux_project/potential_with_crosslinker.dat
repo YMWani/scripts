@@ -16,7 +16,7 @@ set type 48 charge -0.75
 set type 61 charge 0.0
 
 bond_coeff 1 9.600 3.81
-bond_coeff 2 9.600 3.81
+bond_coeff 2 9.600 7.0
 
 pair_style hybrid/overlay wf/cut 25.0 coul/debye 0.126 0.0 lj/cut 10.0
 
