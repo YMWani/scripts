@@ -379,10 +379,10 @@ def main():
     rng = np.random.default_rng()
 
     # Select uniformly spaced frames to analyze (total 100 frames)
-    if timesteps.shape[0] < 100:
-        frame_indices_to_analyze = np.arange(timesteps.shape[0])
+    if timesteps.shape[0] < 110:
+        frame_indices_to_analyze = np.arange(timesteps.shape[0])[10:] # Skip the first 10 frames to avoid initialization artifacts
     else:
-        frame_indices_to_analyze = np.linspace(0, timesteps.shape[0] - 1, 100, dtype=int)
+        frame_indices_to_analyze = np.linspace(10, timesteps.shape[0] - 1, 100, dtype=int)
 
     # Iterate over different frames
     for frame_idx in tqdm(frame_indices_to_analyze):
