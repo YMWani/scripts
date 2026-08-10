@@ -429,7 +429,7 @@ def main():
     error_distribution = sem(histogram_data_arr[:, :, 1], axis=0)
 
     # Save the mean distribution
-    np.savetxt("pore_size_distribution.dat",
+    np.savetxt(f"pore_size_distribution_{sampling_space[4]}_{sampling_space[5]}.dat",
                np.column_stack((bin_centers, mean_distribution, error_distribution)),
                header="Bin_center(Angstroms) Mean_Distribution Error",
                fmt='%.6f')
