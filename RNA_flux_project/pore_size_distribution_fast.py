@@ -351,7 +351,7 @@ def main():
     # Dictionary containing particle radii
     # Read potentials.dat file to extract particle radii
     particle_radii = {}
-    with open(f"{current_dir}/potential_60_particle_types.dat", 'r') as f:
+    with open(f"{current_dir}/potential_with_crosslinker.dat", 'r') as f:
         lines = f.readlines()
         for line in lines:
             parts = line.split()
