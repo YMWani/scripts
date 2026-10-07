@@ -328,10 +328,10 @@ def minimum_image(diff, box_lengths):
 # ----------------------------------------------------------------------------------
 def robust_sphere_optimization_3d(pos, pos_p, particle_radius=1.0,
                                   bounds=((None, None), (None, None), (None, None)),
-                                  box_lengths=(0.0, 0.0, 0.0)):
+                                  box_lengths=(0.0, 0.0, 0.0), wall_slab=None):
     """
     Find the largest sphere that encloses the point pos_p without intersecting any
-    particle in pos.
+    particle in pos (or the flat wall slab, if one is given).
 
     Same problem formulation, optimizer, ftol and maxiter as the validated original,
     with analytic gradients instead of scipy's finite differencing, and with distances
@@ -344,6 +344,11 @@ def robust_sphere_optimization_3d(pos, pos_p, particle_radius=1.0,
     - bounds:          bounds on the sphere centre
     - box_lengths:     (3,) periodic box lengths; a non-positive entry disables
                        periodicity in that dimension
+    - wall_slab:       optional (z_lo, z_hi). The region z_lo <= z <= z_hi is treated
+                       as a solid wall bounded by two flat planes, so the sphere may not
+                       cross either plane. Its surface distance is max(z_lo - z, z - z_hi)
+                       for a centre outside the slab; z periodicity is ignored for it,
+                       which is safe while the sampled windows sit far from the z faces.
 
     Returns the scipy result, with `.radius` and `.center` attached on success.
     """
@@ -372,6 +377,14 @@ def robust_sphere_optimization_3d(pos, pos_p, particle_radius=1.0,
         # so the gradients below stay consistent with the minimum-image distance the
         # objective actually used.
         result = (surface_distances[i_star], distances[i_star], diff[i_star].copy())
+        if wall_slab is not None:
+            # Expressed in the same (surface distance, |diff|, diff) form as a particle,
+            # with a unit `diff`, so the gradients below need no special case:
+            # d(-f)/dc = diff / |diff| holds for both planes.
+            below, above = wall_slab[0] - center[2], center[2] - wall_slab[1]
+            f_wall, normal = (below, 1.0) if below >= above else (above, -1.0)
+            if f_wall < result[0]:
+                result = (f_wall, 1.0, np.array([0.0, 0.0, normal]))
         cache.clear()
         cache[key] = result
         return result
@@ -423,6 +436,9 @@ def robust_sphere_optimization_3d(pos, pos_p, particle_radius=1.0,
         if periodic:
             diff = minimum_image(diff, box_lengths)
         result.radius = np.min(np.linalg.norm(diff, axis=1) - particle_radius)
+        if wall_slab is not None:
+            result.radius = min(result.radius, max(wall_slab[0] - center[2],
+                                                   center[2] - wall_slab[1]))
         result.center = center
 
     return result
@@ -480,32 +496,35 @@ _mp_positions = None
 _mp_radius = None
 _mp_bounds = None
 _mp_box_lengths = None
+_mp_wall_slab = None
 
 
-def _pool_initializer(positions, radius, bounds, box_lengths):
-    global _mp_positions, _mp_radius, _mp_bounds, _mp_box_lengths
+def _pool_initializer(positions, radius, bounds, box_lengths, wall_slab=None):
+    global _mp_positions, _mp_radius, _mp_bounds, _mp_box_lengths, _mp_wall_slab
     _mp_positions = positions
     _mp_radius = radius
     _mp_bounds = bounds
     _mp_box_lengths = box_lengths
+    _mp_wall_slab = wall_slab
 
 
 def _optimize_one_point(pos_p):
     result = robust_sphere_optimization_3d(_mp_positions, pos_p, _mp_radius,
                                            bounds=_mp_bounds,
-                                           box_lengths=_mp_box_lengths)
+                                           box_lengths=_mp_box_lengths,
+                                           wall_slab=_mp_wall_slab)
     return result.radius if result.success else None
 
 
 def optimize_points_parallel(points, positions, radius, bounds, num_workers,
-                             box_lengths):
+                             box_lengths, wall_slab=None):
     if num_workers <= 1:
-        _pool_initializer(positions, radius, bounds, box_lengths)
+        _pool_initializer(positions, radius, bounds, box_lengths, wall_slab)
         return [_optimize_one_point(p) for p in points]
     # A fresh pool per call so each frame's updated positions reach the workers via
     # initargs; pool startup is milliseconds next to the seconds of optimization work.
     with mp.Pool(processes=num_workers, initializer=_pool_initializer,
-                 initargs=(positions, radius, bounds, box_lengths)) as pool:
+                 initargs=(positions, radius, bounds, box_lengths, wall_slab)) as pool:
         return pool.map(_optimize_one_point, points,
                         chunksize=max(1, len(points) // (num_workers * 4)))
 
